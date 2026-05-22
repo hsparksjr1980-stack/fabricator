@@ -1,2 +1,22 @@
-import { Card } from '@/components/Card';import { Screen } from '@/components/Screen';import { AppText, Label, Title } from '@/components/Text';import { useFabricatorStore } from '@/state/useFabricatorStore';
-export function TimelineScreen(){const s=useFabricatorStore();const items=[...s.sessions.filter(x=>x.projectId===s.selectedProjectId).map(x=>({id:x.id,kind:'Session',title:x.title,meta:x.notes,date:x.createdAt})),...s.tasks.filter(x=>x.projectId===s.selectedProjectId).map(x=>({id:x.id,kind:'Task',title:x.title,meta:x.status,date:'Now'})),...s.parts.filter(x=>x.projectId===s.selectedProjectId).map(x=>({id:x.id,kind:'Part',title:x.name,meta:x.status,date:'Now'})),...s.photos.filter(x=>x.projectId===s.selectedProjectId).map(x=>({id:x.id,kind:'Photo',title:x.caption,meta:x.tag,date:x.createdAt}))];return <Screen><Label>Build log</Label><Title>Timeline</Title>{items.map(i=><Card key={`${i.kind}-${i.id}`}><Label>{i.kind} • {i.date}</Label><Title style={{fontSize:18}}>{i.title}</Title><AppText>{i.meta}</AppText></Card>)}</Screen>}
+import { Card } from '@/components/Card';
+import { Screen } from '@/components/Screen';
+import { AppText, Label, Title } from '@/components/Text';
+import { useFabricatorStore } from '@/state/useFabricatorStore';
+
+export function TimelineScreen(){
+const s=useFabricatorStore();
+
+const items=[
+...s.sessions.filter(x=>x.projectId===s.selectedProjectId).map(x=>({id:x.id,kind:'Session',title:x.title,meta:x.notes,date:x.createdAt,sort:x.createdAt})),
+...s.tasks.filter(x=>x.projectId===s.selectedProjectId).map(x=>({id:x.id,kind:'Task',title:x.title,meta:x.status,date:'Updated now',sort:'9999'})),
+...s.parts.filter(x=>x.projectId===s.selectedProjectId).map(x=>({id:x.id,kind:'Part',title:x.name,meta:x.status,date:'Updated now',sort:'9998'})),
+...s.photos.filter(x=>x.projectId===s.selectedProjectId).map(x=>({id:x.id,kind:'Photo',title:x.caption,meta:x.tag,date:x.createdAt,sort:x.createdAt}))
+].sort((a,b)=>b.sort.localeCompare(a.sort));
+
+return <Screen>
+<Label>Build log</Label>
+<Title>Timeline</Title>
+<AppText style={{marginBottom:14}}>Your shop memory updates automatically as sessions, tasks, parts, and photos are added.</AppText>
+{items.map(i=><Card key={`${i.kind}-${i.id}`}><Label>{i.kind} • {i.date}</Label><Title style={{fontSize:18}}>{i.title}</Title><AppText>{i.meta}</AppText></Card>)}
+</Screen>
+}
