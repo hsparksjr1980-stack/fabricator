@@ -1,19 +1,14 @@
+import { TRANSCRIBE_ENDPOINT } from '@/config/supabase';
+
 export interface VoiceCaptureResult {
   transcript:string;
   confidence:number;
   durationMs:number;
-  source:'remote-speech-to-text'|'mock-local-pipeline';
+  source:string;
 }
 
 export interface VoiceTranscriptionService {
   transcribe(uri?: string,durationMs?:number): Promise<VoiceCaptureResult>;
-}
-
-const TRANSCRIPTION_URL='https://api.openai.com/v1/audio/transcriptions';
-const MODEL='whisper-1';
-
-function apiKey(){
-  return process.env.EXPO_PUBLIC_OPENAI_API_KEY;
 }
 
 function mockTranscript(durationMs:number){
@@ -27,25 +22,29 @@ function mockTranscript(durationMs:number){
 }
 
 async function remoteTranscribe(uri:string,durationMs:number):Promise<VoiceCaptureResult>{
-  const key=apiKey();
-  if(!key){
-    return {transcript:`Speech-to-text key not configured. ${mockTranscript(durationMs)}`,confidence:0.5,durationMs,source:'mock-local-pipeline'};
-  }
-
   const form=new FormData();
-  form.append('model',MODEL);
-  form.append('response_format','json');
-  form.append('language','en');
-  form.append('prompt','Workshop fabrication note. Preserve parts, measurements, materials, tasks, blockers, and next session instructions.');
+  form.append('durationMs',String(durationMs));
   form.append('file',{uri,name:'fabricator-note.m4a',type:'audio/m4a'} as any);
 
-  const response=await fetch(TRANSCRIPTION_URL,{method:'POST',headers:{Authorization:`Bearer ${key}`},body:form});
+  const response=await fetch(TRANSCRIBE_ENDPOINT,{method:'POST',body:form});
+
   if(!response.ok){
-    return {transcript:`Speech-to-text failed with status ${response.status}.`,confidence:0,durationMs,source:'mock-local-pipeline'};
+    return {
+      transcript:`Supabase transcription failed with status ${response.status}.`,
+      confidence:0,
+      durationMs,
+      source:'supabase-error'
+    };
   }
 
   const payload=await response.json();
-  return {transcript:payload.text || '',confidence:0.95,durationMs,source:'remote-speech-to-text'};
+
+  return {
+    transcript:payload.transcript || '',
+    confidence:payload.confidence || 0.95,
+    durationMs,
+    source:payload.source || 'supabase'
+  };
 }
 
 export const mockVoiceTranscriptionService: VoiceTranscriptionService = {
@@ -53,6 +52,12 @@ export const mockVoiceTranscriptionService: VoiceTranscriptionService = {
     if(uri){
       return remoteTranscribe(uri,durationMs);
     }
-    return {transcript:mockTranscript(durationMs),confidence:0.91,durationMs,source:'mock-local-pipeline'};
+
+    return {
+      transcript:mockTranscript(durationMs),
+      confidence:0.91,
+      durationMs,
+      source:'mock-local-pipeline'
+    };
   }
 };
