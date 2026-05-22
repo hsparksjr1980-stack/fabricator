@@ -1,0 +1,3 @@
+import { Pressable, StyleSheet, Text } from 'react-native';import { colors, radius, spacing } from '@/theme/theme';
+export function Button({title,onPress,variant='primary'}:{title:string;onPress?:()=>void;variant?:'primary'|'ghost'}){return <Pressable onPress={onPress} style={[styles.btn,variant==='ghost'&&styles.ghost]}><Text style={styles.text}>{title}</Text></Pressable>}
+const styles=StyleSheet.create({btn:{backgroundColor:colors.orange,borderRadius:radius.md,paddingVertical:spacing.md,paddingHorizontal:spacing.lg,alignItems:'center'},ghost:{backgroundColor:colors.graphite,borderColor:colors.line,borderWidth:1},text:{color:colors.white,fontWeight:'800'}})

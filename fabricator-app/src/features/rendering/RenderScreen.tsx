@@ -1,0 +1,2 @@
+import { Card } from '@/components/Card';import { Screen } from '@/components/Screen';import { AppText, Label, Title } from '@/components/Text';
+export function RenderScreen(){return <Screen><Label>Concept render</Label><Title>Visual direction, not CAD</Title><Card><Title style={{fontSize:18}}>Placeholder</Title><AppText>Future AI concept rendering can turn build notes and reference photos into rough visual ideas. Fabricator will not become CAD software or engineering design software.</AppText></Card></Screen>}
