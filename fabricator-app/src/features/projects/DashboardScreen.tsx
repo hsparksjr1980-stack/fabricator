@@ -93,7 +93,7 @@ return <Screen>
 <Modal visible={editorOpen} animationType="slide" transparent onRequestClose={()=>setEditorOpen(false)}>
 <View style={styles.modalOverlay}>
 <View style={styles.modalCard}>
-<View style={styles.modalHeader}><Title style={{fontSize:24}}>Dashboard Setup</Title><Pressable onPress={()=>setEditorOpen(false)}><MaterialCommunityIcons name="close" size={26} color={colors.white}/></Pressable></View>
+<View style={styles.modalHeader}><Title style={{fontSize:24}}>Workspace Setup</Title><Pressable onPress={()=>setEditorOpen(false)}><MaterialCommunityIcons name="close" size={26} color={colors.white}/></Pressable></View>
 <Label>ROLE PRESETS</Label>
 <View style={styles.widgetRow}>{presets.map(preset=><Pressable key={preset} onPress={()=>store.applyDashboardPreset(preset)} style={[styles.widgetToggle,store.dashboardPreset===preset&&styles.widgetToggleActive]}><AppText>{preset}</AppText></Pressable>)}</View>
 <Label style={{marginTop:18}}>WIDGET ORDER / SIZE</Label>
