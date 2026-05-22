@@ -3,12 +3,12 @@ import { BuildPhoto, BuildTask, GarageSession, Part, Project, VoiceNote } from '
 export const projects: Project[] = [
 {
 id:'p1',
-name:'1968 C10 Shop Truck',
-category:'Vehicle Build',
+name:'Tube Chassis Shop Kart',
+category:'Metal Fabrication',
 phase:'Fabrication',
 status:'Active',
-progress:42,
-hook:'Remembers the build so the next session starts faster.',
+progress:38,
+hook:'A polished demo build showing how Fabricator remembers sessions, parts, photos, blockers, and the next shop plan.',
 updatedAt:'2026-05-22'
 },
 {
@@ -23,12 +23,12 @@ updatedAt:'2026-05-20'
 },
 {
 id:'p3',
-name:'Tube Chassis Go Kart',
-category:'Metal Fabrication',
-phase:'Mockup',
-status:'In Progress',
-progress:28,
-hook:'Track measurements, bends, weld prep, and materials.',
+name:'1968 C10 Shop Truck',
+category:'Vehicle Build',
+phase:'Fabrication',
+status:'Paused',
+progress:42,
+hook:'Keep restoration notes, parts, and next steps in one place.',
 updatedAt:'2026-05-21'
 },
 {
@@ -43,12 +43,30 @@ updatedAt:'2026-05-18'
 }
 ];
 
-export const sessions: GarageSession[] = [{ id:'s1', projectId:'p1', title:'Cab mount cleanup', durationMinutes:95, notes:'Ground old welds, marked patch panels, found missing body shims.', createdAt:'2026-05-21' }];
+export const sessions: GarageSession[] = [
+{ id:'s1', projectId:'p1', title:'Main hoop and base rail mockup', durationMinutes:135, notes:'Cut base rails, tacked main hoop, confirmed seat position, and marked steering shaft clearance. Need to re-check left rear diagonal before final weld.', createdAt:'2026-05-22' },
+{ id:'s2', projectId:'p1', title:'Material prep and bend layout', durationMinutes:80, notes:'Cleaned tube stock, labeled bends, measured rear axle centerline, and staged tabs for pedal box mockup.', createdAt:'2026-05-21' }
+];
 
-export const voiceNotes: VoiceNote[] = [{ id:'v1', projectId:'p1', transcript:'Placeholder transcript: order cab bushings, finish driver side patch, photograph frame notch.', createdAt:'2026-05-22' }];
+export const voiceNotes: VoiceNote[] = [
+{ id:'v1', projectId:'p1', transcript:'Placeholder transcript: order two more 3/4 inch heims, finish left rear diagonal, photograph steering clearance, add gussets after pedal box mockup.', createdAt:'2026-05-22' }
+];
 
-export const tasks: BuildTask[] = [{ id:'t1', projectId:'p1', title:'Finish driver side rocker patch', system:'Body', status:'In Progress' },{ id:'t2', projectId:'p1', title:'Mock up fuel line route', system:'Fuel', status:'To Do' },{ id:'t3', projectId:'p1', title:'Clean rear frame section', system:'Chassis', status:'Done' }];
+export const tasks: BuildTask[] = [
+{ id:'t1', projectId:'p1', title:'Re-check left rear diagonal fitment', system:'Chassis', status:'In Progress' },
+{ id:'t2', projectId:'p1', title:'Mock up pedal box and steering shaft', system:'Controls', status:'To Do' },
+{ id:'t3', projectId:'p1', title:'Deburr and clean base rails', system:'Fabrication Prep', status:'Done' },
+{ id:'t4', projectId:'p1', title:'Add gusset layout marks after pedal test fit', system:'Chassis', status:'To Do' }
+];
 
-export const parts: Part[] = [{ id:'pa1', projectId:'p1', name:'Cab bushings kit', system:'Body', status:'Need to Order', vendor:'LMC Truck' },{ id:'pa2', projectId:'p1', name:'Patch panel sheet', system:'Body', status:'On Hand' },{ id:'pa3', projectId:'p1', name:'Rear shock mounts', system:'Suspension', status:'Installed' }];
+export const parts: Part[] = [
+{ id:'pa1', projectId:'p1', name:'3/4 inch heims', system:'Steering', status:'Need to Order', vendor:'Speedway Motors' },
+{ id:'pa2', projectId:'p1', name:'1 inch DOM tube stock', system:'Chassis', status:'On Hand' },
+{ id:'pa3', projectId:'p1', name:'Pedal box tabs', system:'Controls', status:'On Hand' },
+{ id:'pa4', projectId:'p1', name:'Rear axle bearing hangers', system:'Driveline', status:'Installed' }
+];
 
-export const photos: BuildPhoto[] = [{ id:'ph1', projectId:'p1', uri:'https://images.unsplash.com/photo-1517524008697-84bbe3c3fd98?w=900', tag:'Chassis', caption:'Rear frame cleaned and ready for paint.', createdAt:'2026-05-21' }];
+export const photos: BuildPhoto[] = [
+{ id:'ph1', projectId:'p1', uri:'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=900', tag:'Chassis', caption:'Tube stock staged and marked for base rail layout.', createdAt:'2026-05-21' },
+{ id:'ph2', projectId:'p1', uri:'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=900', tag:'Mockup', caption:'Main hoop tacked in place before diagonal fitment check.', createdAt:'2026-05-22' }
+];
