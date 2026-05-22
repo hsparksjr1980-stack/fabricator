@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Audio } from 'expo-av';
 import { ImageBackground, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -17,23 +18,15 @@ const lower=text.toLowerCase();
 const parts:string[]=[];
 const next:string[]=[];
 const blockers:string[]=[];
-
 if(lower.includes('dom')) parts.push('1.75 DOM tubing');
 if(lower.includes('heims')) parts.push('Front heims');
 if(lower.includes('tabs')) parts.push('Brake tabs');
-if(lower.includes('aluminum')) parts.push('Aluminum sheet');
 if(lower.includes('sealer')) parts.push('Seam sealer');
-
-if(lower.includes('next')) next.push('Continue next-session fabrication priorities');
 if(lower.includes('steering')) next.push('Validate steering clearance');
 if(lower.includes('crossmember')) next.push('Tack rear crossmember');
 if(lower.includes('gusset')) next.push('Finish gusset reinforcement');
-if(lower.includes('gap')) next.push('Check final gaps before finishing');
-
 if(lower.includes('waiting')) blockers.push('Waiting on supplier parts');
 if(lower.includes('clearance')) blockers.push('Potential clearance conflict');
-if(lower.includes('blocked')) blockers.push('Build progress blocked');
-
 return {parts,next,blockers};
 }
 
@@ -42,17 +35,44 @@ const store=useFabricatorStore();
 const notes=store.voiceNotes.filter(v=>v.projectId===store.selectedProjectId);
 const [recording,setRecording]=useState(false);
 const [promoted,setPromoted]=useState(false);
+const [duration,setDuration]=useState(0);
+const [pipeline,setPipeline]=useState<'idle'|'capturing'|'processing'>('idle');
+const recordingRef=useRef<Audio.Recording|null>(null);
 const latest=notes[0];
 const extracted=useMemo(()=>latest?extractOperationalItems(latest.transcript):{parts:[],next:[],blockers:[]},[latest]);
 
-const mockRecord=async()=>{
-setRecording(true);
-setPromoted(false);
-setTimeout(async()=>{
-const transcript=await mockVoiceTranscriptionService.transcribe();
-store.addVoiceNote(transcript);
+useEffect(()=>{
+let interval:any;
+if(recording){interval=setInterval(()=>setDuration(v=>v+1),1000)}
+return ()=>clearInterval(interval)
+},[recording]);
+
+const toggleRecording=async()=>{
+if(recording){
+setPipeline('processing');
+const active=recordingRef.current;
+if(active){
+await active.stopAndUnloadAsync();
+const result=await mockVoiceTranscriptionService.transcribe(active.getURI()||undefined,duration*1000);
+store.addVoiceNote(result.transcript);
+}
+recordingRef.current=null;
 setRecording(false);
-},1800)
+setDuration(0);
+setPipeline('idle');
+return;
+}
+
+const permission=await Audio.requestPermissionsAsync();
+if(!permission.granted)return;
+await Audio.setAudioModeAsync({allowsRecordingIOS:true,playsInSilentModeIOS:true});
+const rec=new Audio.Recording();
+await rec.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+await rec.startAsync();
+recordingRef.current=rec;
+setPromoted(false);
+setRecording(true);
+setPipeline('capturing');
 }
 
 const promoteItems=()=>{
@@ -68,95 +88,32 @@ return <Screen>
 <View style={styles.heroContent}>
 <Label>VOICE OPERATIONS</Label>
 <Title style={styles.heroTitle}>Workshop Memory</Title>
-<AppText style={styles.heroCopy}>Capture fabrication thinking in real time. Fabricator turns spoken shop notes into parts, tasks, blockers, and next-session prep.</AppText>
+<AppText style={styles.heroCopy}>Capture fabrication thinking in real time. Fabricator now includes a real local recording pipeline foundation.</AppText>
 </View>
 </ImageBackground>
 
 <Card style={styles.captureCard}>
-<View style={styles.captureHeader}>
-<View>
-<Label>LIVE SESSION</Label>
-<Title style={styles.captureTitle}>{recording?'Recording in shop':'Ready for hands-free capture'}</Title>
-</View>
-<View style={[styles.statusOrb,recording&&styles.statusOrbActive]} />
-</View>
-
-<Pressable onPress={mockRecord} style={({pressed})=>[styles.recordButton,pressed&&styles.recordPressed]}>
-<View style={styles.innerRecord}>
-<MaterialCommunityIcons name={recording?'stop':'microphone'} size={52} color={colors.white}/>
-</View>
-</Pressable>
-
-<AppText style={styles.captureText}>Speak naturally during work. Capture what changed, what is missing, what blocked progress, and what you need ready next time.</AppText>
-<Button title={recording?'Recording...':'Mock Workshop Capture'} onPress={mockRecord} />
+<View style={styles.captureHeader}><View><Label>LIVE SESSION</Label><Title style={styles.captureTitle}>{recording?'Recording in shop':'Ready for hands-free capture'}</Title></View><View style={[styles.statusOrb,recording&&styles.statusOrbActive]} /></View>
+<Pressable onPress={toggleRecording} style={({pressed})=>[styles.recordButton,pressed&&styles.recordPressed]}><View style={styles.innerRecord}><MaterialCommunityIcons name={recording?'stop':'microphone'} size={52} color={colors.white}/></View></Pressable>
+<Title style={styles.timer}>{String(Math.floor(duration/60)).padStart(2,'0')}:{String(duration%60).padStart(2,'0')}</Title>
+<AppText style={styles.pipeline}>{pipeline==='capturing'?'Capturing workshop audio':pipeline==='processing'?'Processing build intelligence':'Voice pipeline standing by'}</AppText>
+<AppText style={styles.captureText}>Next phase connects real speech-to-text AI transcription and cloud extraction.</AppText>
+<Button title={recording?'Stop Recording':'Start Workshop Capture'} onPress={toggleRecording} />
 </Card>
 
-{latest?<>
-<View style={styles.sectionHeader}><Label>AI EXTRACTION</Label><AppText>Operational build intelligence</AppText></View>
-
-<View style={styles.grid}>
-<Card style={styles.gridCard}>
-<View style={styles.iconRow}><MaterialCommunityIcons name="package-variant-closed" size={22} color={colors.orange}/><Label>Parts To Order</Label></View>
-{extracted.parts.length?extracted.parts.map(item=><AppText key={item} style={styles.listItem}>• {item}</AppText>):<AppText>No parts detected yet.</AppText>}
-</Card>
-<Card style={styles.gridCard}>
-<View style={styles.iconRow}><MaterialCommunityIcons name="hammer-wrench" size={22} color={colors.orange}/><Label>Next Session</Label></View>
-{extracted.next.length?extracted.next.map(item=><AppText key={item} style={styles.listItem}>• {item}</AppText>):<AppText>No next-session actions extracted.</AppText>}
-</Card>
-</View>
-
-<Card>
-<View style={styles.iconRow}><MaterialCommunityIcons name="alert-outline" size={22} color={colors.orange}/><Label>Blockers + Risks</Label></View>
-{extracted.blockers.length?extracted.blockers.map(item=><AppText key={item} style={styles.listItem}>• {item}</AppText>):<AppText>No major blockers detected.</AppText>}
-<View style={{height:12}} />
-<Button title={promoted?'Added to build system':'Add Extracted Items to Build'} onPress={promoteItems} />
-</Card>
-
-<Card style={styles.briefCard}>
-<View style={styles.iconRow}><MaterialCommunityIcons name="clipboard-text-clock" size={22} color={colors.orange}/><Label>Startup Brief</Label></View>
-<AppText style={styles.briefText}>Before the next session, stage extracted parts, clear blockers, and start with the first next-session action. This converts voice notes into working instructions.</AppText>
-</Card>
-
-<Card style={styles.transcriptCard}>
-<View style={styles.iconRow}><MaterialCommunityIcons name="waveform" size={22} color={colors.orange}/><Label>Latest Transcript</Label></View>
-<AppText style={styles.transcript}>{latest.transcript}</AppText>
-</Card>
+{latest?<><View style={styles.sectionHeader}><Label>AI EXTRACTION</Label><AppText>Operational build intelligence</AppText></View>
+<View style={styles.grid}><Card style={styles.gridCard}><View style={styles.iconRow}><MaterialCommunityIcons name="package-variant-closed" size={22} color={colors.orange}/><Label>Parts To Order</Label></View>{extracted.parts.length?extracted.parts.map(item=><AppText key={item} style={styles.listItem}>• {item}</AppText>):<AppText>No parts detected yet.</AppText>}</Card><Card style={styles.gridCard}><View style={styles.iconRow}><MaterialCommunityIcons name="hammer-wrench" size={22} color={colors.orange}/><Label>Next Session</Label></View>{extracted.next.length?extracted.next.map(item=><AppText key={item} style={styles.listItem}>• {item}</AppText>):<AppText>No next-session actions extracted.</AppText>}</Card></View>
+<Card><View style={styles.iconRow}><MaterialCommunityIcons name="alert-outline" size={22} color={colors.orange}/><Label>Blockers + Risks</Label></View>{extracted.blockers.length?extracted.blockers.map(item=><AppText key={item} style={styles.listItem}>• {item}</AppText>):<AppText>No major blockers detected.</AppText>}<View style={{height:12}} /><Button title={promoted?'Added to build system':'Add Extracted Items to Build'} onPress={promoteItems} /></Card>
+<Card style={styles.transcriptCard}><View style={styles.iconRow}><MaterialCommunityIcons name="waveform" size={22} color={colors.orange}/><Label>Latest Transcript</Label></View><AppText style={styles.transcript}>{latest.transcript}</AppText></Card>
 </>:null}
 
 <View style={styles.sectionHeader}><Label>VOICE HISTORY</Label><AppText>Garage session memory archive</AppText></View>
-<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.historyRow}>
-{notes.map(note=><Card key={note.id} style={styles.historyCard}><Label>{note.createdAt}</Label><AppText style={styles.historyText}>{note.transcript}</AppText></Card>)}
-</ScrollView>
+<ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.historyRow}>{notes.map(note=><Card key={note.id} style={styles.historyCard}><Label>{note.createdAt}</Label><AppText style={styles.historyText}>{note.transcript}</AppText></Card>)}</ScrollView>
 <View style={{height:40}} />
 </Screen>
 }
 
 const styles=StyleSheet.create({
 hero:{height:320,borderRadius:radius.xl,overflow:'hidden',marginBottom:18,borderWidth:1,borderColor:colors.line,backgroundColor:colors.black,...shadows.panel},
-heroImage:{opacity:0.78},
-heroShade:{...StyleSheet.absoluteFillObject},
-heroContent:{flex:1,justifyContent:'flex-end',padding:spacing.lg},
-heroTitle:{fontSize:38,lineHeight:42},
-heroCopy:{color:colors.white,marginTop:10},
-captureCard:{alignItems:'center',borderColor:'rgba(217,106,29,0.35)'},
-captureHeader:{width:'100%',flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:18},
-captureTitle:{fontSize:24,lineHeight:29},
-statusOrb:{width:18,height:18,borderRadius:999,backgroundColor:colors.steel},
-statusOrbActive:{backgroundColor:colors.orange},
-recordButton:{width:180,height:180,borderRadius:999,backgroundColor:colors.orangeSoft,borderWidth:1,borderColor:'rgba(217,106,29,0.35)',alignItems:'center',justifyContent:'center',marginBottom:20},
-innerRecord:{width:130,height:130,borderRadius:999,backgroundColor:colors.orange,alignItems:'center',justifyContent:'center'},
-recordPressed:{opacity:0.82,transform:[{scale:0.98}]},
-captureText:{textAlign:'center',marginBottom:18,maxWidth:'90%'},
-sectionHeader:{marginTop:4,marginBottom:12},
-grid:{flexDirection:'row',gap:12},
-gridCard:{flex:1},
-iconRow:{flexDirection:'row',alignItems:'center',gap:8,marginBottom:12},
-listItem:{marginBottom:6,color:colors.white},
-briefCard:{borderColor:'rgba(217,106,29,0.35)'},
-briefText:{color:colors.white,lineHeight:23},
-transcriptCard:{borderColor:'rgba(217,106,29,0.28)'},
-transcript:{lineHeight:24,color:colors.white},
-historyRow:{paddingBottom:10,gap:12},
-historyCard:{width:280},
-historyText:{color:colors.white,lineHeight:22}
+heroImage:{opacity:0.78},heroShade:{...StyleSheet.absoluteFillObject},heroContent:{flex:1,justifyContent:'flex-end',padding:spacing.lg},heroTitle:{fontSize:38,lineHeight:42},heroCopy:{color:colors.white,marginTop:10},captureCard:{alignItems:'center',borderColor:'rgba(217,106,29,0.35)'},captureHeader:{width:'100%',flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:18},captureTitle:{fontSize:24,lineHeight:29},statusOrb:{width:18,height:18,borderRadius:999,backgroundColor:colors.steel},statusOrbActive:{backgroundColor:colors.orange},recordButton:{width:180,height:180,borderRadius:999,backgroundColor:colors.orangeSoft,borderWidth:1,borderColor:'rgba(217,106,29,0.35)',alignItems:'center',justifyContent:'center',marginBottom:20},innerRecord:{width:130,height:130,borderRadius:999,backgroundColor:colors.orange,alignItems:'center',justifyContent:'center'},recordPressed:{opacity:0.82,transform:[{scale:0.98}]},timer:{fontSize:42,lineHeight:48,color:colors.orange},pipeline:{marginTop:6,color:colors.white,fontWeight:'700'},captureText:{textAlign:'center',marginVertical:18,maxWidth:'90%'},sectionHeader:{marginTop:4,marginBottom:12},grid:{flexDirection:'row',gap:12},gridCard:{flex:1},iconRow:{flexDirection:'row',alignItems:'center',gap:8,marginBottom:12},listItem:{marginBottom:6,color:colors.white},transcriptCard:{borderColor:'rgba(217,106,29,0.28)'},transcript:{lineHeight:24,color:colors.white},historyRow:{paddingBottom:10,gap:12},historyCard:{width:280},historyText:{color:colors.white,lineHeight:22}
 });
