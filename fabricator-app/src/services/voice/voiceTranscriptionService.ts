@@ -21,6 +21,15 @@ function mockTranscript(durationMs:number){
   return `${templates[Math.floor(Math.random()*templates.length)]} Recorded workshop capture duration ${(durationMs/1000).toFixed(0)} seconds.`;
 }
 
+async function readError(response:Response){
+  try{
+    const payload=await response.json();
+    return JSON.stringify(payload,null,2);
+  }catch{
+    return await response.text();
+  }
+}
+
 async function remoteTranscribe(uri:string,durationMs:number):Promise<VoiceCaptureResult>{
   const form=new FormData();
   form.append('durationMs',String(durationMs));
@@ -29,8 +38,9 @@ async function remoteTranscribe(uri:string,durationMs:number):Promise<VoiceCaptu
   const response=await fetch(TRANSCRIBE_ENDPOINT,{method:'POST',body:form});
 
   if(!response.ok){
+    const detail=await readError(response);
     return {
-      transcript:`Supabase transcription failed with status ${response.status}.`,
+      transcript:`Supabase transcription failed with status ${response.status}. Details: ${detail}`,
       confidence:0,
       durationMs,
       source:'supabase-error'
