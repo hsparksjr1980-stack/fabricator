@@ -1,9 +1,11 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { Pressable, View } from 'react-native';
 import { colors } from '@/theme/theme';
 import { WelcomeScreen } from '@/features/projects/WelcomeScreen';
 import { DashboardScreen } from '@/features/projects/DashboardScreen';
+import { ProjectEditScreen } from '@/features/projects/ProjectEditScreen';
 import { SessionScreen } from '@/features/sessions/SessionScreen';
 import { VoiceNoteScreen } from '@/features/sessions/VoiceNoteScreen';
 import { TimelineScreen } from '@/features/buildLog/TimelineScreen';
@@ -17,36 +19,41 @@ const Tabs=createBottomTabNavigator();
 const Stack=createNativeStackNavigator();
 
 const tabIcons:any = {
-Dashboard:'hammer-wrench',
-Session:'garage',
+Dashboard:'view-dashboard-outline',
+Session:'hammer-wrench',
 Voice:'microphone-outline',
 Log:'timeline-text-outline',
 Tasks:'clipboard-check-outline',
-Parts:'tools',
-Photos:'camera-outline',
-Render:'cube-outline',
+Parts:'package-variant-closed',
+Photos:'image-multiple-outline',
+Render:'lightbulb-on-outline',
 Settings:'cog-outline'
 };
 
 function MainTabs(){
 return <Tabs.Navigator
-screenOptions={({route})=>({
+screenOptions={({route,navigation})=>({
 headerStyle:{backgroundColor:colors.graphite},
 headerTintColor:colors.white,
-headerTitleStyle:{fontWeight:'700'},
+headerTitleStyle:{fontWeight:'800'},
 headerShadowVisible:false,
 sceneStyle:{backgroundColor:colors.black},
+headerRight:()=> <View style={{flexDirection:'row',gap:14,marginRight:8}}>
+<Pressable onPress={()=>navigation.navigate('Photos')}><MaterialCommunityIcons name="camera-outline" size={22} color={colors.orange} /></Pressable>
+<Pressable onPress={()=>navigation.getParent()?.navigate('ProjectEdit')}><MaterialCommunityIcons name="square-edit-outline" size={22} color={colors.white} /></Pressable>
+</View>,
 tabBarStyle:{
 backgroundColor:colors.graphite,
 borderTopColor:colors.line,
-height:76,
+height:78,
 paddingBottom:10,
 paddingTop:8
 },
 tabBarActiveTintColor:colors.orange,
 tabBarInactiveTintColor:colors.steel,
-tabBarLabelStyle:{fontSize:11,fontWeight:'700'},
-tabBarIcon:({color,size})=><MaterialCommunityIcons name={tabIcons[route.name]} color={color} size={size+4} />
+tabBarHideOnKeyboard:true,
+tabBarLabelStyle:{fontSize:11,fontWeight:'800'},
+tabBarIcon:({color,size,focused})=><MaterialCommunityIcons name={tabIcons[route.name]} color={color} size={focused?size+6:size+3} />
 })}>
 <Tabs.Screen name="Dashboard" component={DashboardScreen}/>
 <Tabs.Screen name="Session" component={SessionScreen}/>
@@ -65,7 +72,7 @@ return <Stack.Navigator
 screenOptions={{
 headerStyle:{backgroundColor:colors.graphite},
 headerTintColor:colors.white,
-headerTitleStyle:{fontWeight:'700'},
+headerTitleStyle:{fontWeight:'800'},
 headerShadowVisible:false,
 contentStyle:{backgroundColor:colors.black}
 }}>
@@ -77,7 +84,12 @@ options={{headerShown:false}}
 <Stack.Screen
 name="Main"
 component={MainTabs}
-options={{title:'Fabricator'}}
+options={{title:'Fabricator Workspace'}}
+/>
+<Stack.Screen
+name="ProjectEdit"
+component={ProjectEditScreen}
+options={{title:'Edit Project'}}
 />
 </Stack.Navigator>
 }
