@@ -12,7 +12,10 @@ Deno.serve(async (req) => {
   try {
     const providerKey = Deno.env.get('OPENAI_API_KEY');
     if (!providerKey) {
-      return Response.json({ error: 'Server transcription key is not configured.' }, { status: 500, headers: corsHeaders });
+      return Response.json(
+        { error: 'Server transcription key is not configured.' },
+        { status: 500, headers: corsHeaders }
+      );
     }
 
     const incoming = await req.formData();
@@ -20,14 +23,27 @@ Deno.serve(async (req) => {
     const durationMs = Number(incoming.get('durationMs') || 0);
 
     if (!(audio instanceof File)) {
-      return Response.json({ error: 'Missing audio file.' }, { status: 400, headers: corsHeaders });
+      return Response.json(
+        { error: 'Missing audio file.', receivedType: typeof audio },
+        { status: 400, headers: corsHeaders }
+      );
+    }
+
+    if (audio.size === 0) {
+      return Response.json(
+        { error: 'Audio file was empty.' },
+        { status: 400, headers: corsHeaders }
+      );
     }
 
     const payload = new FormData();
     payload.append('model', 'whisper-1');
     payload.append('response_format', 'json');
     payload.append('language', 'en');
-    payload.append('prompt', 'Workshop build note. Preserve parts, measurements, materials, blockers, and next-session instructions.');
+    payload.append(
+      'prompt',
+      'Workshop build note. Preserve parts, measurements, materials, blockers, and next-session instructions.'
+    );
     payload.append('file', audio, audio.name || 'fabricator-note.m4a');
 
     const upstream = await fetch('https://api.openai.com/v1/audio/transcriptions', {
@@ -37,12 +53,34 @@ Deno.serve(async (req) => {
     });
 
     if (!upstream.ok) {
-      return Response.json({ error: 'Speech transcription failed.', status: upstream.status }, { status: upstream.status, headers: corsHeaders });
+      const detail = await upstream.text();
+      return Response.json(
+        {
+          error: 'Speech transcription failed.',
+          status: upstream.status,
+          detail,
+          fileName: audio.name,
+          fileType: audio.type,
+          fileSize: audio.size
+        },
+        { status: upstream.status, headers: corsHeaders }
+      );
     }
 
     const result = await upstream.json();
-    return Response.json({ transcript: result.text || '', confidence: 0.95, durationMs, source: 'supabase-speech-transcription' }, { headers: corsHeaders });
+    return Response.json(
+      {
+        transcript: result.text || '',
+        confidence: 0.95,
+        durationMs,
+        source: 'supabase-speech-transcription'
+      },
+      { headers: corsHeaders }
+    );
   } catch (error) {
-    return Response.json({ error: error instanceof Error ? error.message : 'Unknown transcription error.' }, { status: 500, headers: corsHeaders });
+    return Response.json(
+      { error: error instanceof Error ? error.message : 'Unknown transcription error.' },
+      { status: 500, headers: corsHeaders }
+    );
   }
 });
