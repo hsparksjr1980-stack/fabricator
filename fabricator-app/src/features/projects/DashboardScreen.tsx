@@ -1,9 +1,8 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, Pressable } from 'react-native';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { AppText, Label, Title } from '@/components/Text';
-import { StatusPill } from '@/components/StatusPill';
 import { useFabricatorStore } from '@/state/useFabricatorStore';
 import { mockAiService } from '@/services/ai/aiService';
 import { useEffect, useState } from 'react';
@@ -13,6 +12,7 @@ import { colors, radius, spacing } from '@/theme/theme';
 export function DashboardScreen(){
 const store=useFabricatorStore();
 const p=store.activeProject();
+const widgets=store.dashboardWidgets;
 const [summary,setSummary]=useState<AiSummary>();
 
 useEffect(()=>{
@@ -36,32 +36,65 @@ style={styles.hero}>
 </View>
 </LinearGradient>
 
-<StatusPill label={`${p.category} • ${p.phase}`}/>
+<Card>
+<Label>DASHBOARD LAYOUT</Label>
+<AppText style={{marginTop:8,marginBottom:14}}>Enable widgets that match your workflow.</AppText>
+<View style={styles.widgetRow}>
+{widgets.map(widget=><Pressable
+key={widget.id}
+onPress={()=>store.toggleWidget(widget.id)}
+style={[
+styles.widgetToggle,
+widget.enabled && styles.widgetToggleActive
+]}>
+<AppText>{widget.title}</AppText>
+</Pressable>)}
+</View>
+</Card>
 
+{widgets.find(w=>w.type==='progress'&&w.enabled) &&
+<Card>
+<Label>PROJECT PROGRESS</Label>
+<Title style={{fontSize:36}}>{p.progress}%</Title>
+<AppText>Status: {p.status}</AppText>
+</Card>
+}
+
+{widgets.find(w=>w.type==='stats'&&w.enabled) &&
 <View style={styles.statsRow}>
 <Card style={styles.statCard}>
-<Label>STATUS</Label>
-<Title style={{fontSize:24}}>{p.status}</Title>
+<Label>PHASE</Label>
+<Title style={{fontSize:22}}>{p.phase}</Title>
 </Card>
 
 <Card style={styles.statCard}>
 <Label>UPDATED</Label>
-<Title style={{fontSize:24}}>{p.updatedAt}</Title>
+<Title style={{fontSize:22}}>{p.updatedAt}</Title>
 </Card>
 </View>
+}
 
+{widgets.find(w=>w.type==='nextSession'&&w.enabled) &&
 <Card>
 <Label>AI NEXT SESSION</Label>
 {summary?.nextSessionChecklist.map(i=><AppText key={i}>• {i}</AppText>)}
-<View style={{height:8}}/>
+</Card>
+}
+
+{widgets.find(w=>w.type==='parts'&&w.enabled) &&
+<Card>
 <Label>PARTS / MATERIALS</Label>
 {summary?.partsNeeded.map(i=><AppText key={i}>• {i}</AppText>)}
 </Card>
+}
 
+{widgets.find(w=>w.type==='creator'&&w.enabled) &&
 <Card>
 <Label>CREATOR EXPORTS</Label>
 <AppText>Future support for fabrication updates, before/after progress posts, reels, build summaries, and public project pages.</AppText>
 </Card>
+}
+
 </Screen>
 }
 
@@ -96,5 +129,22 @@ gap:12
 },
 statCard:{
 flex:1
+},
+widgetRow:{
+flexDirection:'row',
+flexWrap:'wrap',
+gap:10
+},
+widgetToggle:{
+paddingVertical:10,
+paddingHorizontal:14,
+borderRadius:999,
+backgroundColor:colors.graphite,
+borderWidth:1,
+borderColor:colors.line
+},
+widgetToggleActive:{
+backgroundColor:colors.orangeSoft,
+borderColor:colors.orange
 }
 });
