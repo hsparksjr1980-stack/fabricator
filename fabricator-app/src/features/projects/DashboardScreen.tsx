@@ -1,27 +1,29 @@
+import React, { useEffect, useMemo, useState } from 'react';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useEffect, useMemo, useState } from 'react';
-import { Modal, Pressable, StyleSheet, View, Image } from 'react-native';
+import { Image, ImageBackground, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { AppText, Label, Title } from '@/components/Text';
 import { useFabricatorStore } from '@/state/useFabricatorStore';
 import { mockAiService } from '@/services/ai/aiService';
 import { AiSummary, DashboardPreset, DashboardWidget } from '@/types/models';
-import { colors, radius, spacing } from '@/theme/theme';
+import { colors, radius, shadows, spacing } from '@/theme/theme';
 
 const presets:DashboardPreset[]=['Fabricator','Woodworker','Restoration','Content Creator','Race Build','Motorcycle Build'];
 const actionIcons:any={session:'garage',voice:'microphone-outline',task:'clipboard-check-outline',part:'tools',photo:'camera-outline',render:'cube-outline'};
 const widgetIcons:any={focus:'target',quickActions:'lightning-bolt-outline',progress:'chart-donut',stats:'view-dashboard-outline',nextSession:'robot-outline',blockers:'alert-octagon-outline',parts:'package-variant-closed',materialsInventory:'warehouse',sessionTimer:'timer-outline',photoFeature:'image-multiple-outline',creator:'share-variant-outline'};
+const heroImage='https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=1600&auto=format&fit=crop';
+const fallbackPhoto='https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=1400&auto=format&fit=crop';
 
-function WidgetShell({widget,children,onPress,hint}:{widget:DashboardWidget;children:React.ReactNode;onPress?:()=>void;hint?:string}){
-return <Pressable onPress={onPress} disabled={!onPress}>
-<Card style={widget.size==='compact'?styles.compactCard:styles.expandedCard}>
+function WidgetShell({widget,children,onPress,hint,featured}:{widget:DashboardWidget;children:React.ReactNode;onPress?:()=>void;hint?:string;featured?:boolean}){
+return <Pressable onPress={onPress} disabled={!onPress} style={({pressed})=>[{transform:[{scale:pressed&&onPress?0.985:1}]}]}>
+<Card style={[widget.size==='compact'?styles.compactCard:styles.expandedCard, featured&&styles.featuredWidget]}>
 <View style={styles.widgetHeader}>
 <View style={styles.widgetTitleRow}>
-<MaterialCommunityIcons name={widgetIcons[widget.type]} size={20} color={colors.orange}/>
-<Label>{widget.title.toUpperCase()}</Label>
+<View style={styles.iconBadge}><MaterialCommunityIcons name={widgetIcons[widget.type]} size={18} color={colors.orange}/></View>
+<Label>{widget.title}</Label>
 </View>
 <View style={styles.headerRight}>
 <View style={styles.sizePill}><AppText style={styles.sizeText}>{widget.size}</AppText></View>
@@ -61,6 +63,7 @@ const neededParts=store.parts.filter(part=>part.projectId===store.selectedProjec
 const availableMaterials=store.parts.filter(part=>part.projectId===store.selectedProjectId&&part.status!=='Need to Order');
 const featurePhoto=store.photos.find(photo=>photo.projectId===store.selectedProjectId);
 const blockers=[...neededParts.map(part=>`Waiting on ${part.name}`),...openTasks.slice(0,2).map(task=>`Open task: ${task.title}`)];
+const completedTasks=projectTasks.filter(t=>t.status==='Done').length;
 
 const goAction=(type:string)=>{
 if(type==='session')navigation.navigate('Session');
@@ -74,37 +77,47 @@ if(type==='render')navigation.navigate('Render');
 if(!p)return null;
 
 const renderWidget=(widget:DashboardWidget)=>{
-if(widget.type==='focus') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Session')} hint="Tap to log notes from the next shop session."><Title style={styles.widgetBig}>Today in Shop</Title><AppText>Focus on the next useful move, not the whole build.</AppText><View style={{height:10}} />{summary?.nextSessionChecklist.slice(0,3).map(item=><AppText key={item}>• {item}</AppText>)}</WidgetShell>;
-if(widget.type==='quickActions') return <WidgetShell key={widget.id} widget={widget} hint="Tap an action to jump straight into capture."><View style={styles.quickGrid}>{store.quickActions.filter(a=>a.enabled).map(action=><Pressable key={action.id} style={styles.quickButton} onPress={()=>goAction(action.type)}><MaterialCommunityIcons name={actionIcons[action.type]} size={24} color={colors.orange}/><AppText>{action.title}</AppText></Pressable>)}</View></WidgetShell>;
-if(widget.type==='progress') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.getParent()?.navigate('ProjectEdit')} hint="Tap to update project status, phase, or progress."><Title style={{fontSize:38}}>{p.progress}%</Title><View style={styles.progressBar}><View style={[styles.progressFill,{width:`${p.progress}%`}]} /></View><AppText style={{marginTop:8}}>{p.phase} • {p.status}</AppText></WidgetShell>;
-if(widget.type==='stats') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Tasks')} hint="Tap to review active work."><View style={styles.statLine}><Label>OPEN TASKS</Label><Title style={styles.metric}>{openTasks.length}</Title></View><View style={styles.statLine}><Label>PARTS NEEDED</Label><Title style={styles.metric}>{neededParts.length}</Title></View><View style={styles.statLine}><Label>UPDATED</Label><AppText>{p.updatedAt}</AppText></View></WidgetShell>;
-if(widget.type==='nextSession') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Session')} hint="Tap to capture the next session note.">{summary?.nextSessionChecklist.map(i=><AppText key={i}>• {i}</AppText>)}</WidgetShell>;
-if(widget.type==='blockers') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Tasks')} hint="Tap to clear blockers through tasks.">{blockers.length?blockers.map(i=><AppText key={i}>• {i}</AppText>):<AppText>No major blockers detected in mock data.</AppText>}<View style={{height:8}}/><AppText>AI blocker analysis placeholder for supplier delays, unfinished prep, missing photos, or stale tasks.</AppText></WidgetShell>;
-if(widget.type==='parts') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Parts')} hint="Tap to add or update parts and materials.">{neededParts.length?neededParts.map(part=><AppText key={part.id}>• {part.name}</AppText>):<AppText>No parts marked need to order.</AppText>}</WidgetShell>;
-if(widget.type==='materialsInventory') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Parts')} hint="Tap to manage inventory.">{availableMaterials.map(part=><AppText key={part.id}>• {part.name} — {part.status}</AppText>)}</WidgetShell>;
+if(widget.type==='focus') return <WidgetShell key={widget.id} widget={widget} featured onPress={()=>navigation.navigate('Session')} hint="Tap to log notes from the next shop session."><View style={styles.panelRail}/><Title style={styles.widgetBig}>Today in Shop</Title><AppText>Keep the build moving with the next physical action.</AppText><View style={{height:12}} />{summary?.nextSessionChecklist.slice(0,3).map(item=><AppText key={item} style={styles.listItem}>• {item}</AppText>)}</WidgetShell>;
+if(widget.type==='quickActions') return <WidgetShell key={widget.id} widget={widget} hint="Direct capture tools for garage work."><View style={styles.quickGrid}>{store.quickActions.filter(a=>a.enabled).map(action=><Pressable key={action.id} style={({pressed})=>[styles.quickButton,pressed&&styles.pressed]} onPress={()=>goAction(action.type)}><MaterialCommunityIcons name={actionIcons[action.type]} size={25} color={colors.orange}/><AppText style={styles.quickText}>{action.title}</AppText></Pressable>)}</View></WidgetShell>;
+if(widget.type==='progress') return <WidgetShell key={widget.id} widget={widget} featured onPress={()=>navigation.getParent()?.navigate('ProjectEdit')} hint="Tap to update phase and progress."><View style={styles.progressInstrument}><Title style={styles.progressNumber}>{p.progress}%</Title><View style={{flex:1}}><View style={styles.progressBar}><View style={[styles.progressFill,{width:`${p.progress}%`}]} /></View><AppText style={{marginTop:8}}>{p.phase} • {p.status}</AppText></View></View></WidgetShell>;
+if(widget.type==='stats') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Tasks')} hint="Tap to review active work."><View style={styles.metricGrid}><View style={styles.metricBox}><Label>Open</Label><Title style={styles.metric}>{openTasks.length}</Title></View><View style={styles.metricBox}><Label>Done</Label><Title style={styles.metric}>{completedTasks}</Title></View><View style={styles.metricBox}><Label>Parts</Label><Title style={styles.metric}>{neededParts.length}</Title></View></View></WidgetShell>;
+if(widget.type==='nextSession') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Session')} hint="Tap to capture the next session note.">{summary?.nextSessionChecklist.map(i=><AppText key={i} style={styles.listItem}>• {i}</AppText>)}</WidgetShell>;
+if(widget.type==='blockers') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Tasks')} hint="Tap to clear blockers through tasks.">{blockers.length?blockers.map(i=><AppText key={i} style={styles.listItem}>• {i}</AppText>):<AppText>No major blockers detected in mock data.</AppText>}<View style={{height:8}}/><AppText>AI blocker analysis placeholder for supplier delays, missing prep, or stale tasks.</AppText></WidgetShell>;
+if(widget.type==='parts') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Parts')} hint="Tap to add or update parts.">{neededParts.length?neededParts.map(part=><AppText key={part.id} style={styles.listItem}>• {part.name}</AppText>):<AppText>No parts marked need to order.</AppText>}</WidgetShell>;
+if(widget.type==='materialsInventory') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Parts')} hint="Tap to manage inventory.">{availableMaterials.map(part=><AppText key={part.id} style={styles.listItem}>• {part.name} — {part.status}</AppText>)}</WidgetShell>;
 if(widget.type==='sessionTimer') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Session')} hint="Tap card to log session notes."><Title style={styles.widgetBig}>{timerMinutes} min</Title><AppText>{timerRunning?'Shop timer running':'Timer ready for next session'}</AppText><Pressable style={styles.primarySmall} onPress={()=>setTimerRunning(!timerRunning)}><AppText style={styles.primarySmallText}>{timerRunning?'Pause':'Start'} Timer</AppText></Pressable></WidgetShell>;
-if(widget.type==='photoFeature') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Photos')} hint="Tap to add tagged progress photos.">{featurePhoto?<><Image source={{uri:featurePhoto.uri}} style={styles.photo}/><AppText style={{marginTop:10}}>{featurePhoto.caption}</AppText></>:<AppText>No project photos yet.</AppText>}</WidgetShell>;
+if(widget.type==='photoFeature') return <WidgetShell key={widget.id} widget={widget} featured onPress={()=>navigation.navigate('Photos')} hint="Tap to add tagged progress photos."><Image source={{uri:featurePhoto?.uri||fallbackPhoto}} style={styles.photo}/><AppText style={{marginTop:10}}>{featurePhoto?.caption||'Featured progress image placeholder for cinematic build documentation.'}</AppText></WidgetShell>;
 if(widget.type==='creator') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Render')} hint="Tap to open concept/export placeholders."><AppText>Draft a build update from recent sessions, photos, tasks, and blockers.</AppText><View style={{height:10}}/><Pressable style={styles.primarySmall}><AppText style={styles.primarySmallText}>Create Update Placeholder</AppText></Pressable></WidgetShell>;
 return null;
 };
 
 return <Screen>
-<LinearGradient colors={[colors.orangeSoft,colors.graphite]} style={styles.hero}>
+<ImageBackground source={{uri:heroImage}} style={styles.hero} imageStyle={styles.heroImage}>
+<LinearGradient colors={['rgba(9,10,11,0.05)','rgba(9,10,11,0.7)','rgba(9,10,11,0.98)']} style={styles.heroShade}/>
+<View style={styles.gridOverlay}/>
+<View style={styles.heroContent}>
 <View style={styles.heroTop}>
 <View style={{flex:1}}>
 <Label>{store.dashboardPreset} WORKSPACE</Label>
-<Title>{p.name}</Title>
-<AppText style={{marginTop:10}}>{p.hook}</AppText>
+<Title style={styles.heroTitle}>{p.name}</Title>
+<AppText style={styles.heroCopy}>{p.hook}</AppText>
 </View>
 <Pressable style={styles.editorButton} onPress={()=>setEditorOpen(true)}>
 <MaterialCommunityIcons name="tune-variant" size={24} color={colors.white}/>
 </Pressable>
 </View>
-<View style={styles.progressRow}><View style={styles.progressBar}><View style={[styles.progressFill,{width:`${p.progress}%`}]} /></View><AppText>{p.progress}%</AppText></View>
-</LinearGradient>
+<View style={styles.heroMetaRow}>
+<View style={styles.heroChip}><Label>PHASE</Label><AppText style={styles.chipValue}>{p.phase}</AppText></View>
+<View style={styles.heroChip}><Label>BLOCKERS</Label><AppText style={styles.chipValue}>{blockers.length}</AppText></View>
+<View style={styles.heroChip}><Label>FOCUS</Label><AppText style={styles.chipValue}>Next Session</AppText></View>
+</View>
+<View style={styles.progressRow}><View style={styles.progressBar}><View style={[styles.progressFill,{width:`${p.progress}%`}]} /></View><AppText style={styles.progressText}>{p.progress}%</AppText></View>
+</View>
+</ImageBackground>
 
-<View style={styles.dock}>{store.quickActions.filter(a=>a.enabled).map(action=><Pressable key={action.id} style={styles.dockButton} onPress={()=>goAction(action.type)}><MaterialCommunityIcons name={actionIcons[action.type]} size={22} color={colors.orange}/><AppText style={styles.dockText}>{action.title}</AppText></Pressable>)}</View>
+<View style={styles.dock}>{store.quickActions.filter(a=>a.enabled).slice(0,6).map(action=><Pressable key={action.id} style={({pressed})=>[styles.dockButton,pressed&&styles.pressed]} onPress={()=>goAction(action.type)}><MaterialCommunityIcons name={actionIcons[action.type]} size={22} color={colors.orange}/><AppText style={styles.dockText}>{action.title}</AppText></Pressable>)}</View>
 
+<View style={styles.sectionHeader}><Label>OPERATIONS</Label><AppText>Live workshop command modules</AppText></View>
 {enabledWidgets.map(renderWidget)}
 
 <Modal visible={editorOpen} animationType="slide" transparent onRequestClose={()=>setEditorOpen(false)}>
@@ -130,31 +143,51 @@ return <Screen>
 }
 
 const styles = StyleSheet.create({
-hero:{padding:spacing.lg,borderRadius:radius.lg,marginBottom:16,borderWidth:1,borderColor:colors.line},
+hero:{height:430,borderRadius:radius.xl,overflow:'hidden',marginBottom:16,borderWidth:1,borderColor:colors.line,backgroundColor:colors.black,...shadows.panel},
+heroImage:{opacity:0.76},
+heroShade:{...StyleSheet.absoluteFillObject},
+gridOverlay:{...StyleSheet.absoluteFillObject,opacity:0.08,borderWidth:1,borderColor:colors.blueprint},
+heroContent:{flex:1,justifyContent:'flex-end',padding:spacing.lg},
 heroTop:{flexDirection:'row',alignItems:'flex-start',gap:12},
-editorButton:{backgroundColor:colors.orange,borderRadius:radius.md,padding:12},
+heroTitle:{fontSize:38,lineHeight:42,letterSpacing:-1.4},
+heroCopy:{marginTop:10,color:colors.white,maxWidth:'92%'},
+editorButton:{backgroundColor:'rgba(217,106,29,0.92)',borderRadius:radius.md,padding:12,borderWidth:1,borderColor:'rgba(255,255,255,0.18)'},
+heroMetaRow:{flexDirection:'row',gap:9,marginTop:22},
+heroChip:{flex:1,backgroundColor:'rgba(16,18,20,0.78)',borderColor:'rgba(255,255,255,0.12)',borderWidth:1,borderRadius:radius.md,padding:10},
+chipValue:{color:colors.white,fontSize:12,marginTop:4,fontWeight:'800'},
 progressRow:{marginTop:18,flexDirection:'row',alignItems:'center',gap:12},
-progressBar:{flex:1,height:10,backgroundColor:colors.line,borderRadius:999,overflow:'hidden'},
+progressBar:{flex:1,height:10,backgroundColor:'rgba(255,255,255,0.15)',borderRadius:999,overflow:'hidden'},
 progressFill:{height:'100%',backgroundColor:colors.orange},
-dock:{flexDirection:'row',flexWrap:'wrap',gap:10,marginBottom:14},
-dockButton:{backgroundColor:colors.panel,borderColor:colors.line,borderWidth:1,borderRadius:999,paddingVertical:10,paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:6},
-dockText:{fontSize:12},
-compactCard:{minHeight:116},
-expandedCard:{minHeight:170},
-widgetHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:10},
+progressText:{color:colors.white,fontWeight:'900'},
+dock:{flexDirection:'row',flexWrap:'wrap',gap:10,marginBottom:20},
+dockButton:{backgroundColor:colors.panelHigh,borderColor:colors.line,borderWidth:1,borderRadius:999,paddingVertical:10,paddingHorizontal:12,flexDirection:'row',alignItems:'center',gap:6},
+dockText:{fontSize:12,color:colors.white},
+pressed:{opacity:0.78,transform:[{scale:0.98}]},
+sectionHeader:{marginTop:2,marginBottom:12},
+compactCard:{minHeight:120},
+expandedCard:{minHeight:176},
+featuredWidget:{borderColor:'rgba(217,106,29,0.45)'},
+widgetHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:12},
 widgetTitleRow:{flexDirection:'row',alignItems:'center',gap:8,flex:1},
+iconBadge:{width:34,height:34,borderRadius:12,backgroundColor:colors.orangeSoft,alignItems:'center',justifyContent:'center',borderWidth:1,borderColor:'rgba(217,106,29,0.35)'},
 headerRight:{flexDirection:'row',alignItems:'center',gap:6},
-sizePill:{backgroundColor:colors.graphite,borderRadius:999,paddingVertical:4,paddingHorizontal:8},
+sizePill:{backgroundColor:colors.charcoal,borderRadius:999,paddingVertical:4,paddingHorizontal:8,borderWidth:1,borderColor:colors.line},
 sizeText:{fontSize:11,color:colors.steel},
 tapHint:{marginTop:12,color:colors.steel,fontSize:12},
-widgetBig:{fontSize:28},
+panelRail:{position:'absolute',left:0,top:56,bottom:20,width:3,backgroundColor:colors.orange,borderTopRightRadius:99,borderBottomRightRadius:99},
+widgetBig:{fontSize:30,lineHeight:35},
 quickGrid:{flexDirection:'row',flexWrap:'wrap',gap:10},
-quickButton:{width:'30%',minWidth:86,backgroundColor:colors.graphite,borderColor:colors.line,borderWidth:1,borderRadius:radius.md,padding:10,alignItems:'center',gap:6},
-statLine:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',paddingVertical:8,borderBottomWidth:1,borderBottomColor:colors.line},
-metric:{fontSize:22},
-photo:{width:'100%',height:190,borderRadius:radius.md,backgroundColor:colors.graphite},
+quickButton:{width:'30%',minWidth:88,backgroundColor:colors.charcoal,borderColor:colors.line,borderWidth:1,borderRadius:radius.md,padding:12,alignItems:'center',gap:7},
+quickText:{fontSize:12,textAlign:'center',color:colors.white},
+listItem:{marginBottom:6,color:colors.white},
+progressInstrument:{flexDirection:'row',alignItems:'center',gap:18},
+progressNumber:{fontSize:44,lineHeight:50,color:colors.orange},
+metricGrid:{flexDirection:'row',gap:10},
+metricBox:{flex:1,backgroundColor:colors.charcoal,borderRadius:radius.md,padding:12,borderWidth:1,borderColor:colors.line},
+metric:{fontSize:26,lineHeight:31},
+photo:{width:'100%',height:220,borderRadius:radius.md,backgroundColor:colors.graphite},
 primarySmall:{marginTop:12,backgroundColor:colors.orange,borderRadius:radius.md,padding:12,alignItems:'center'},
-primarySmallText:{fontWeight:'800',color:colors.white},
+primarySmallText:{fontWeight:'900',color:colors.white},
 modalOverlay:{flex:1,backgroundColor:'rgba(0,0,0,0.72)',justifyContent:'flex-end'},
 modalCard:{maxHeight:'88%',backgroundColor:colors.black,borderTopLeftRadius:28,borderTopRightRadius:28,padding:spacing.lg,borderWidth:1,borderColor:colors.line},
 modalHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:18},
