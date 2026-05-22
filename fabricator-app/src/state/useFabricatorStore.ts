@@ -1,10 +1,12 @@
 import { create } from 'zustand';
 import { BuildPhoto, BuildTask, DashboardPreset, DashboardWidget, GarageSession, Part, Project, ProjectCategory, ProjectPhase, ProjectStatus, QuickAction, VoiceNote } from '@/types/models';
 import { dashboardLayoutStorage } from '@/services/storage/dashboardLayoutStorage';
+import { appDataStorage } from '@/services/storage/appDataStorage';
 import * as mock from './mockData';
 
 type SavedLayout = { preset:DashboardPreset; widgets:DashboardWidget[]; quickActions:QuickAction[] };
 type ProjectInput = { name:string; category:ProjectCategory; phase:ProjectPhase; status:ProjectStatus; hook?:string };
+type PersistedData = { selectedProjectId:string; projects:Project[]; sessions:GarageSession[]; voiceNotes:VoiceNote[]; tasks:BuildTask[]; parts:Part[]; photos:BuildPhoto[] };
 
 type Store = {
 selectedProjectId:string;
@@ -17,6 +19,7 @@ photos:BuildPhoto[];
 dashboardPreset:DashboardPreset;
 dashboardWidgets:DashboardWidget[];
 quickActions:QuickAction[];
+hasLoadedAppData:boolean;
 selectProject:(id:string)=>void;
 activeProject:()=>Project|undefined;
 addProject:(input:ProjectInput)=>void;
@@ -35,6 +38,9 @@ applyDashboardPreset:(preset:DashboardPreset)=>void;
 toggleQuickAction:(id:string)=>void;
 saveDashboardLayout:()=>Promise<void>;
 loadDashboardLayout:()=>Promise<void>;
+saveAppData:()=>Promise<void>;
+loadAppData:()=>Promise<void>;
+resetDemoData:()=>Promise<void>;
 };
 
 const nextId = (p:string) => `${p}-${Date.now()}`;
@@ -83,27 +89,32 @@ return copy;
 };
 
 const currentLayout=(s:Store):SavedLayout=>({preset:s.dashboardPreset,widgets:s.dashboardWidgets,quickActions:s.quickActions});
+const currentData=(s:Store):PersistedData=>({selectedProjectId:s.selectedProjectId,projects:s.projects,sessions:s.sessions,voiceNotes:s.voiceNotes,tasks:s.tasks,parts:s.parts,photos:s.photos});
+const persistSoon=(get:()=>Store)=>setTimeout(()=>get().saveAppData(),0);
 
 export const useFabricatorStore = create<Store>()((set,get)=>(
 {
 selectedProjectId:'p1',projects:mock.projects,sessions:mock.sessions,voiceNotes:mock.voiceNotes,tasks:mock.tasks,parts:mock.parts,photos:mock.photos,
-dashboardPreset:'Fabricator',dashboardWidgets:presetWidgets.Fabricator,quickActions,
-selectProject:(id)=>{set({selectedProjectId:id}); setTimeout(()=>get().loadDashboardLayout(),0);},
+dashboardPreset:'Fabricator',dashboardWidgets:presetWidgets.Fabricator,quickActions,hasLoadedAppData:false,
+selectProject:(id)=>{set({selectedProjectId:id}); setTimeout(()=>{get().loadDashboardLayout();get().saveAppData();},0);},
 activeProject:()=>get().projects.find(p=>p.id===get().selectedProjectId),
-addProject:(input)=>set(s=>{const id=nextId('p');return {selectedProjectId:id,projects:[{id,name:input.name,category:input.category,phase:input.phase,status:input.status,progress:0,hook:input.hook||'Keep momentum by capturing sessions, parts, tasks, and photos.',updatedAt:today()},...s.projects]}}),
-updateProject:(id,input)=>set(s=>({projects:s.projects.map(p=>p.id===id?{...p,...input,updatedAt:today()}:p)})),
-addSession:(notes)=>set(s=>({sessions:[{id:nextId('s'),projectId:s.selectedProjectId,title:'Garage session',notes,durationMinutes:60,createdAt:today()},...s.sessions]})),
-addVoiceNote:(transcript)=>set(s=>({voiceNotes:[{id:nextId('v'),projectId:s.selectedProjectId,transcript,createdAt:today()},...s.voiceNotes]})),
-addTask:(title,system)=>set(s=>({tasks:[{id:nextId('t'),projectId:s.selectedProjectId,title,system,status:'To Do'},...s.tasks]})),
-addPart:(name,system,vendor)=>set(s=>({parts:[{id:nextId('pa'),projectId:s.selectedProjectId,name,system,status:'Need to Order',vendor},...s.parts]})),
-addPhoto:(caption,tag,uri)=>set(s=>({photos:[{id:nextId('ph'),projectId:s.selectedProjectId,caption,tag,uri:uri||'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=900',createdAt:today()},...s.photos]})),
-cycleTask:(id)=>set(s=>({tasks:s.tasks.map(t=>t.id===id?{...t,status:t.status==='To Do'?'In Progress':t.status==='In Progress'?'Done':'To Do'}:t)})),
-cyclePart:(id)=>set(s=>({parts:s.parts.map(p=>p.id===id?{...p,status:p.status==='Need to Order'?'On Hand':p.status==='On Hand'?'Installed':'Need to Order'}:p)})),
+addProject:(input)=>set(s=>{const id=nextId('p');persistSoon(get);return {selectedProjectId:id,projects:[{id,name:input.name,category:input.category,phase:input.phase,status:input.status,progress:0,hook:input.hook||'Keep momentum by capturing sessions, parts, tasks, and photos.',updatedAt:today()},...s.projects]}}),
+updateProject:(id,input)=>set(s=>{persistSoon(get);return {projects:s.projects.map(p=>p.id===id?{...p,...input,updatedAt:today()}:p)}}),
+addSession:(notes)=>set(s=>{persistSoon(get);return {sessions:[{id:nextId('s'),projectId:s.selectedProjectId,title:'Garage session',notes,durationMinutes:60,createdAt:today()},...s.sessions]}}),
+addVoiceNote:(transcript)=>set(s=>{persistSoon(get);return {voiceNotes:[{id:nextId('v'),projectId:s.selectedProjectId,transcript,createdAt:today()},...s.voiceNotes]}}),
+addTask:(title,system)=>set(s=>{persistSoon(get);return {tasks:[{id:nextId('t'),projectId:s.selectedProjectId,title,system,status:'To Do'},...s.tasks]}}),
+addPart:(name,system,vendor)=>set(s=>{persistSoon(get);return {parts:[{id:nextId('pa'),projectId:s.selectedProjectId,name,system,status:'Need to Order',vendor},...s.parts]}}),
+addPhoto:(caption,tag,uri)=>set(s=>{persistSoon(get);return {photos:[{id:nextId('ph'),projectId:s.selectedProjectId,caption,tag,uri:uri||'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=900',createdAt:today()},...s.photos]}}),
+cycleTask:(id)=>set(s=>{persistSoon(get);return {tasks:s.tasks.map(t=>t.id===id?{...t,status:t.status==='To Do'?'In Progress':t.status==='In Progress'?'Done':'To Do'}:t)}}),
+cyclePart:(id)=>set(s=>{persistSoon(get);return {parts:s.parts.map(p=>p.id===id?{...p,status:p.status==='Need to Order'?'On Hand':p.status==='On Hand'?'Installed':'Need to Order'}:p)}}),
 toggleWidget:(id)=>set(s=>({dashboardWidgets:s.dashboardWidgets.map(w=>w.id===id?{...w,enabled:!w.enabled}:w)})),
 toggleWidgetSize:(id)=>set(s=>({dashboardWidgets:s.dashboardWidgets.map(w=>w.id===id?{...w,size:w.size==='compact'?'expanded':'compact'}:w)})),
 moveWidget:(id,direction)=>set(s=>({dashboardWidgets:reorder(s.dashboardWidgets,id,direction)})),
 applyDashboardPreset:(preset)=>set({dashboardPreset:preset,dashboardWidgets:presetWidgets[preset]}),
 toggleQuickAction:(id)=>set(s=>({quickActions:s.quickActions.map(a=>a.id===id?{...a,enabled:!a.enabled}:a)})),
 saveDashboardLayout:async()=>{const s=get(); await dashboardLayoutStorage.save(storageKey(s.selectedProjectId),currentLayout(s));},
-loadDashboardLayout:async()=>{const s=get(); const saved=await dashboardLayoutStorage.load(storageKey(s.selectedProjectId)); if(saved){set({dashboardPreset:saved.preset,dashboardWidgets:saved.widgets,quickActions:saved.quickActions});}}
+loadDashboardLayout:async()=>{const s=get(); const saved=await dashboardLayoutStorage.load(storageKey(s.selectedProjectId)); if(saved){set({dashboardPreset:saved.preset,dashboardWidgets:saved.widgets,quickActions:saved.quickActions});}},
+saveAppData:async()=>{await appDataStorage.save(currentData(get()));},
+loadAppData:async()=>{const saved=await appDataStorage.load(); if(saved){set({...saved,hasLoadedAppData:true});}else{set({hasLoadedAppData:true});}},
+resetDemoData:async()=>{await appDataStorage.clear();set({selectedProjectId:'p1',projects:mock.projects,sessions:mock.sessions,voiceNotes:mock.voiceNotes,tasks:mock.tasks,parts:mock.parts,photos:mock.photos});}
 }));
