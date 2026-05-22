@@ -22,14 +22,17 @@ if(lower.includes('dom')) parts.push('1.75 DOM tubing');
 if(lower.includes('heims')) parts.push('Front heims');
 if(lower.includes('tabs')) parts.push('Brake tabs');
 if(lower.includes('aluminum')) parts.push('Aluminum sheet');
+if(lower.includes('sealer')) parts.push('Seam sealer');
 
 if(lower.includes('next')) next.push('Continue next-session fabrication priorities');
 if(lower.includes('steering')) next.push('Validate steering clearance');
 if(lower.includes('crossmember')) next.push('Tack rear crossmember');
 if(lower.includes('gusset')) next.push('Finish gusset reinforcement');
+if(lower.includes('gap')) next.push('Check final gaps before finishing');
 
 if(lower.includes('waiting')) blockers.push('Waiting on supplier parts');
 if(lower.includes('clearance')) blockers.push('Potential clearance conflict');
+if(lower.includes('blocked')) blockers.push('Build progress blocked');
 
 return {parts,next,blockers};
 }
@@ -38,16 +41,25 @@ export function VoiceNoteScreen(){
 const store=useFabricatorStore();
 const notes=store.voiceNotes.filter(v=>v.projectId===store.selectedProjectId);
 const [recording,setRecording]=useState(false);
+const [promoted,setPromoted]=useState(false);
 const latest=notes[0];
 const extracted=useMemo(()=>latest?extractOperationalItems(latest.transcript):{parts:[],next:[],blockers:[]},[latest]);
 
 const mockRecord=async()=>{
 setRecording(true);
+setPromoted(false);
 setTimeout(async()=>{
 const transcript=await mockVoiceTranscriptionService.transcribe();
 store.addVoiceNote(transcript);
 setRecording(false);
 },1800)
+}
+
+const promoteItems=()=>{
+extracted.parts.forEach(item=>store.addPart(item,'Voice Capture','Voice note'));
+extracted.next.forEach(item=>store.addTask(item,'Next Session'));
+extracted.blockers.forEach(item=>store.addTask(item,'Blocker'));
+setPromoted(true);
 }
 
 return <Screen>
@@ -56,7 +68,7 @@ return <Screen>
 <View style={styles.heroContent}>
 <Label>VOICE OPERATIONS</Label>
 <Title style={styles.heroTitle}>Workshop Memory</Title>
-<AppText style={styles.heroCopy}>Capture fabrication thinking in real time. Fabricator converts spoken shop notes into tasks, parts, blockers, and next-session intelligence.</AppText>
+<AppText style={styles.heroCopy}>Capture fabrication thinking in real time. Fabricator turns spoken shop notes into parts, tasks, blockers, and next-session prep.</AppText>
 </View>
 </ImageBackground>
 
@@ -75,10 +87,7 @@ return <Screen>
 </View>
 </Pressable>
 
-<AppText style={styles.captureText}>
-Speak naturally during fabrication work. The system will later classify tasks, needed materials, measurements, blockers, and next-session priorities automatically.
-</AppText>
-
+<AppText style={styles.captureText}>Speak naturally during work. Capture what changed, what is missing, what blocked progress, and what you need ready next time.</AppText>
 <Button title={recording?'Recording...':'Mock Workshop Capture'} onPress={mockRecord} />
 </Card>
 
@@ -90,7 +99,6 @@ Speak naturally during fabrication work. The system will later classify tasks, n
 <View style={styles.iconRow}><MaterialCommunityIcons name="package-variant-closed" size={22} color={colors.orange}/><Label>Parts To Order</Label></View>
 {extracted.parts.length?extracted.parts.map(item=><AppText key={item} style={styles.listItem}>• {item}</AppText>):<AppText>No parts detected yet.</AppText>}
 </Card>
-
 <Card style={styles.gridCard}>
 <View style={styles.iconRow}><MaterialCommunityIcons name="hammer-wrench" size={22} color={colors.orange}/><Label>Next Session</Label></View>
 {extracted.next.length?extracted.next.map(item=><AppText key={item} style={styles.listItem}>• {item}</AppText>):<AppText>No next-session actions extracted.</AppText>}
@@ -100,6 +108,13 @@ Speak naturally during fabrication work. The system will later classify tasks, n
 <Card>
 <View style={styles.iconRow}><MaterialCommunityIcons name="alert-outline" size={22} color={colors.orange}/><Label>Blockers + Risks</Label></View>
 {extracted.blockers.length?extracted.blockers.map(item=><AppText key={item} style={styles.listItem}>• {item}</AppText>):<AppText>No major blockers detected.</AppText>}
+<View style={{height:12}} />
+<Button title={promoted?'Added to build system':'Add Extracted Items to Build'} onPress={promoteItems} />
+</Card>
+
+<Card style={styles.briefCard}>
+<View style={styles.iconRow}><MaterialCommunityIcons name="clipboard-text-clock" size={22} color={colors.orange}/><Label>Startup Brief</Label></View>
+<AppText style={styles.briefText}>Before the next session, stage extracted parts, clear blockers, and start with the first next-session action. This converts voice notes into working instructions.</AppText>
 </Card>
 
 <Card style={styles.transcriptCard}>
@@ -109,11 +124,9 @@ Speak naturally during fabrication work. The system will later classify tasks, n
 </>:null}
 
 <View style={styles.sectionHeader}><Label>VOICE HISTORY</Label><AppText>Garage session memory archive</AppText></View>
-
 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.historyRow}>
 {notes.map(note=><Card key={note.id} style={styles.historyCard}><Label>{note.createdAt}</Label><AppText style={styles.historyText}>{note.transcript}</AppText></Card>)}
 </ScrollView>
-
 <View style={{height:40}} />
 </Screen>
 }
@@ -139,6 +152,8 @@ grid:{flexDirection:'row',gap:12},
 gridCard:{flex:1},
 iconRow:{flexDirection:'row',alignItems:'center',gap:8,marginBottom:12},
 listItem:{marginBottom:6,color:colors.white},
+briefCard:{borderColor:'rgba(217,106,29,0.35)'},
+briefText:{color:colors.white,lineHeight:23},
 transcriptCard:{borderColor:'rgba(217,106,29,0.28)'},
 transcript:{lineHeight:24,color:colors.white},
 historyRow:{paddingBottom:10,gap:12},
