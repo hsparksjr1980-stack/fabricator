@@ -1,6 +1,9 @@
 import { create } from 'zustand';
 import { BuildPhoto, BuildTask, DashboardPreset, DashboardWidget, GarageSession, Part, Project, QuickAction, VoiceNote } from '@/types/models';
+import { dashboardLayoutStorage } from '@/services/storage/dashboardLayoutStorage';
 import * as mock from './mockData';
+
+type SavedLayout = { preset:DashboardPreset; widgets:DashboardWidget[]; quickActions:QuickAction[] };
 
 type Store = {
 selectedProjectId:string;
@@ -24,9 +27,12 @@ toggleWidgetSize:(id:string)=>void;
 moveWidget:(id:string,direction:'up'|'down')=>void;
 applyDashboardPreset:(preset:DashboardPreset)=>void;
 toggleQuickAction:(id:string)=>void;
+saveDashboardLayout:()=>Promise<void>;
+loadDashboardLayout:()=>Promise<void>;
 };
 
 const nextId = (p:string) => `${p}-${Date.now()}`;
+const storageKey=(projectId:string)=>`dashboard:${projectId}`;
 
 const quickActions:QuickAction[] = [
 {id:'qa-session',type:'session',title:'Session',enabled:true},
@@ -43,7 +49,7 @@ const baseWidgets:DashboardWidget[] = [
 {id:'progress',type:'progress',title:'Project Progress',enabled:true,size:'compact'},
 {id:'stats',type:'stats',title:'Build Stats',enabled:true,size:'compact'},
 {id:'next',type:'nextSession',title:'Next Session AI',enabled:true,size:'expanded'},
-{id:'blockers',type:'blockers',title:"What's Blocking Progress",enabled:true,size:'expanded'},
+{id:'blockers',type:'blockers',title:'Progress Blockers',enabled:true,size:'expanded'},
 {id:'parts',type:'parts',title:'Parts Needed',enabled:true,size:'compact'},
 {id:'materials',type:'materialsInventory',title:'Materials Inventory',enabled:true,size:'compact'},
 {id:'timer',type:'sessionTimer',title:'Session Timer',enabled:true,size:'compact'},
@@ -69,22 +75,14 @@ const copy=[...items];
 return copy;
 };
 
+const currentLayout=(s:Store):SavedLayout=>({preset:s.dashboardPreset,widgets:s.dashboardWidgets,quickActions:s.quickActions});
+
 export const useFabricatorStore = create<Store>()((set,get)=>(
 {
-selectedProjectId:'p1',
-projects:mock.projects,
-sessions:mock.sessions,
-voiceNotes:mock.voiceNotes,
-tasks:mock.tasks,
-parts:mock.parts,
-photos:mock.photos,
-dashboardPreset:'Fabricator',
-dashboardWidgets:presetWidgets.Fabricator,
-quickActions,
-
-selectProject:(id)=>set({selectedProjectId:id}),
+selectedProjectId:'p1',projects:mock.projects,sessions:mock.sessions,voiceNotes:mock.voiceNotes,tasks:mock.tasks,parts:mock.parts,photos:mock.photos,
+dashboardPreset:'Fabricator',dashboardWidgets:presetWidgets.Fabricator,quickActions,
+selectProject:(id)=>{set({selectedProjectId:id}); setTimeout(()=>get().loadDashboardLayout(),0);},
 activeProject:()=>get().projects.find(p=>p.id===get().selectedProjectId),
-
 addSession:(notes)=>set(s=>({sessions:[{id:nextId('s'),projectId:s.selectedProjectId,title:'Garage session',notes,durationMinutes:60,createdAt:new Date().toISOString().slice(0,10)},...s.sessions]})),
 addVoiceNote:(transcript)=>set(s=>({voiceNotes:[{id:nextId('v'),projectId:s.selectedProjectId,transcript,createdAt:new Date().toISOString().slice(0,10)},...s.voiceNotes]})),
 cycleTask:(id)=>set(s=>({tasks:s.tasks.map(t=>t.id===id?{...t,status:t.status==='To Do'?'In Progress':t.status==='In Progress'?'Done':'To Do'}:t)})),
@@ -93,5 +91,7 @@ toggleWidget:(id)=>set(s=>({dashboardWidgets:s.dashboardWidgets.map(w=>w.id===id
 toggleWidgetSize:(id)=>set(s=>({dashboardWidgets:s.dashboardWidgets.map(w=>w.id===id?{...w,size:w.size==='compact'?'expanded':'compact'}:w)})),
 moveWidget:(id,direction)=>set(s=>({dashboardWidgets:reorder(s.dashboardWidgets,id,direction)})),
 applyDashboardPreset:(preset)=>set({dashboardPreset:preset,dashboardWidgets:presetWidgets[preset]}),
-toggleQuickAction:(id)=>set(s=>({quickActions:s.quickActions.map(a=>a.id===id?{...a,enabled:!a.enabled}:a)}))
+toggleQuickAction:(id)=>set(s=>({quickActions:s.quickActions.map(a=>a.id===id?{...a,enabled:!a.enabled}:a)})),
+saveDashboardLayout:async()=>{const s=get(); await dashboardLayoutStorage.save(storageKey(s.selectedProjectId),currentLayout(s));},
+loadDashboardLayout:async()=>{const s=get(); const saved=await dashboardLayoutStorage.load(storageKey(s.selectedProjectId)); if(saved){set({dashboardPreset:saved.preset,dashboardWidgets:saved.widgets,quickActions:saved.quickActions});}}
 }));
