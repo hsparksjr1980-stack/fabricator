@@ -38,7 +38,9 @@ headerTintColor:colors.white,
 headerTitleStyle:{fontWeight:'800'},
 headerShadowVisible:false,
 sceneStyle:{backgroundColor:colors.black},
+headerLeft:()=>route.name==='Dashboard'?null:<Pressable style={{marginLeft:10}} onPress={()=>navigation.navigate('Dashboard')}><MaterialCommunityIcons name="view-dashboard-outline" size={24} color={colors.orange} /></Pressable>,
 headerRight:()=> <View style={{flexDirection:'row',gap:14,marginRight:8}}>
+<Pressable onPress={()=>navigation.navigate('Dashboard')}><MaterialCommunityIcons name="home-variant-outline" size={22} color={colors.orange} /></Pressable>
 <Pressable onPress={()=>navigation.navigate('Photos')}><MaterialCommunityIcons name="camera-outline" size={22} color={colors.orange} /></Pressable>
 <Pressable onPress={()=>navigation.getParent()?.navigate('ProjectEdit')}><MaterialCommunityIcons name="square-edit-outline" size={22} color={colors.white} /></Pressable>
 </View>,
@@ -84,12 +86,12 @@ options={{headerShown:false}}
 <Stack.Screen
 name="Main"
 component={MainTabs}
-options={{title:'Fabricator Workspace'}}
+options={{title:'Fabricator Workspace',headerBackVisible:false,gestureEnabled:false}}
 />
 <Stack.Screen
 name="ProjectEdit"
 component={ProjectEditScreen}
-options={{title:'Edit Project'}}
+options={({navigation})=>({title:'Edit Project',headerRight:()=> <Pressable onPress={()=>navigation.navigate('Main',{screen:'Dashboard'})}><MaterialCommunityIcons name="view-dashboard-outline" size={24} color={colors.orange} /></Pressable>})}
 />
 </Stack.Navigator>
 }
