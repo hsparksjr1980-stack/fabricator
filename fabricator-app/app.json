@@ -1,1 +1,1 @@
-{"expo":{"name":"Fabricator","slug":"fabricator","version":"0.1.0","orientation":"portrait","userInterfaceStyle":"dark","newArchEnabled":false,"assetBundlePatterns":["**/*"],"ios":{"supportsTablet":true},"android":{"adaptiveIcon":{"backgroundColor":"#121212"}},"web":{"bundler":"metro"}}}
+{"expo":{"name":"Fabricator","slug":"fabricator","version":"0.1.0","orientation":"portrait","userInterfaceStyle":"dark","assetBundlePatterns":["**/*"],"ios":{"supportsTablet":true},"android":{"adaptiveIcon":{"backgroundColor":"#121212"}},"web":{"bundler":"metro"}}}
