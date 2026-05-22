@@ -30,10 +30,16 @@ async function readError(response:Response){
   }
 }
 
+async function buildAudioBlob(uri:string){
+  const audioResponse=await fetch(uri);
+  return audioResponse.blob();
+}
+
 async function remoteTranscribe(uri:string,durationMs:number):Promise<VoiceCaptureResult>{
+  const audioBlob=await buildAudioBlob(uri);
   const form=new FormData();
   form.append('durationMs',String(durationMs));
-  form.append('file',{uri,name:'fabricator-note.m4a',type:'audio/m4a'} as any);
+  form.append('file',audioBlob as any,'fabricator-note.m4a');
 
   const response=await fetch(TRANSCRIBE_ENDPOINT,{method:'POST',body:form});
 
