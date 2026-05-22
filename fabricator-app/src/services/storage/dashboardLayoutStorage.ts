@@ -1,14 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const KEY='fabricator-dashboard-layout';
-
 export const dashboardLayoutStorage={
-async save(layout:any){
-await AsyncStorage.setItem(KEY,JSON.stringify(layout));
+async save(key:string,layout:any){
+await AsyncStorage.setItem(`fabricator:${key}`,JSON.stringify(layout));
 },
 
-async load(){
-const raw=await AsyncStorage.getItem(KEY);
+async load(key:string){
+const raw=await AsyncStorage.getItem(`fabricator:${key}`);
 if(!raw)return null;
 return JSON.parse(raw);
 }
