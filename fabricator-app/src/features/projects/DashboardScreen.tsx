@@ -1,5 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { useEffect, useMemo, useState } from 'react';
 import { Modal, Pressable, StyleSheet, View, Image } from 'react-native';
 import { Card } from '@/components/Card';
@@ -14,20 +15,27 @@ const presets:DashboardPreset[]=['Fabricator','Woodworker','Restoration','Conten
 const actionIcons:any={session:'garage',voice:'microphone-outline',task:'clipboard-check-outline',part:'tools',photo:'camera-outline',render:'cube-outline'};
 const widgetIcons:any={focus:'target',quickActions:'lightning-bolt-outline',progress:'chart-donut',stats:'view-dashboard-outline',nextSession:'robot-outline',blockers:'alert-octagon-outline',parts:'package-variant-closed',materialsInventory:'warehouse',sessionTimer:'timer-outline',photoFeature:'image-multiple-outline',creator:'share-variant-outline'};
 
-function WidgetShell({widget,children}:{widget:DashboardWidget;children:React.ReactNode}){
-return <Card style={widget.size==='compact'?styles.compactCard:styles.expandedCard}>
+function WidgetShell({widget,children,onPress,hint}:{widget:DashboardWidget;children:React.ReactNode;onPress?:()=>void;hint?:string}){
+return <Pressable onPress={onPress} disabled={!onPress}>
+<Card style={widget.size==='compact'?styles.compactCard:styles.expandedCard}>
 <View style={styles.widgetHeader}>
 <View style={styles.widgetTitleRow}>
 <MaterialCommunityIcons name={widgetIcons[widget.type]} size={20} color={colors.orange}/>
 <Label>{widget.title.toUpperCase()}</Label>
 </View>
+<View style={styles.headerRight}>
 <View style={styles.sizePill}><AppText style={styles.sizeText}>{widget.size}</AppText></View>
+{onPress?<MaterialCommunityIcons name="chevron-right" size={22} color={colors.steel}/>:null}
+</View>
 </View>
 {children}
+{hint?<AppText style={styles.tapHint}>{hint}</AppText>:null}
 </Card>
+</Pressable>
 }
 
 export function DashboardScreen(){
+const navigation=useNavigation<any>();
 const store=useFabricatorStore();
 const p=store.activeProject();
 const widgets=store.dashboardWidgets;
@@ -54,20 +62,29 @@ const availableMaterials=store.parts.filter(part=>part.projectId===store.selecte
 const featurePhoto=store.photos.find(photo=>photo.projectId===store.selectedProjectId);
 const blockers=[...neededParts.map(part=>`Waiting on ${part.name}`),...openTasks.slice(0,2).map(task=>`Open task: ${task.title}`)];
 
+const goAction=(type:string)=>{
+if(type==='session')navigation.navigate('Session');
+if(type==='voice')navigation.navigate('Voice');
+if(type==='task')navigation.navigate('Tasks');
+if(type==='part')navigation.navigate('Parts');
+if(type==='photo')navigation.navigate('Photos');
+if(type==='render')navigation.navigate('Render');
+};
+
 if(!p)return null;
 
 const renderWidget=(widget:DashboardWidget)=>{
-if(widget.type==='focus') return <WidgetShell key={widget.id} widget={widget}><Title style={styles.widgetBig}>Today in Shop</Title><AppText>Focus on the next useful move, not the whole build.</AppText><View style={{height:10}} />{summary?.nextSessionChecklist.slice(0,3).map(item=><AppText key={item}>• {item}</AppText>)}</WidgetShell>;
-if(widget.type==='quickActions') return <WidgetShell key={widget.id} widget={widget}><View style={styles.quickGrid}>{store.quickActions.filter(a=>a.enabled).map(action=><Pressable key={action.id} style={styles.quickButton}><MaterialCommunityIcons name={actionIcons[action.type]} size={24} color={colors.orange}/><AppText>{action.title}</AppText></Pressable>)}</View></WidgetShell>;
-if(widget.type==='progress') return <WidgetShell key={widget.id} widget={widget}><Title style={{fontSize:38}}>{p.progress}%</Title><View style={styles.progressBar}><View style={[styles.progressFill,{width:`${p.progress}%`}]} /></View><AppText style={{marginTop:8}}>{p.phase} • {p.status}</AppText></WidgetShell>;
-if(widget.type==='stats') return <WidgetShell key={widget.id} widget={widget}><View style={styles.statLine}><Label>OPEN TASKS</Label><Title style={styles.metric}>{openTasks.length}</Title></View><View style={styles.statLine}><Label>PARTS NEEDED</Label><Title style={styles.metric}>{neededParts.length}</Title></View><View style={styles.statLine}><Label>UPDATED</Label><AppText>{p.updatedAt}</AppText></View></WidgetShell>;
-if(widget.type==='nextSession') return <WidgetShell key={widget.id} widget={widget}>{summary?.nextSessionChecklist.map(i=><AppText key={i}>• {i}</AppText>)}</WidgetShell>;
-if(widget.type==='blockers') return <WidgetShell key={widget.id} widget={widget}>{blockers.length?blockers.map(i=><AppText key={i}>• {i}</AppText>):<AppText>No major blockers detected in mock data.</AppText>}<View style={{height:8}}/><AppText>AI blocker analysis placeholder for supplier delays, unfinished prep, missing photos, or stale tasks.</AppText></WidgetShell>;
-if(widget.type==='parts') return <WidgetShell key={widget.id} widget={widget}>{neededParts.length?neededParts.map(part=><AppText key={part.id}>• {part.name}</AppText>):<AppText>No parts marked need to order.</AppText>}</WidgetShell>;
-if(widget.type==='materialsInventory') return <WidgetShell key={widget.id} widget={widget}>{availableMaterials.map(part=><AppText key={part.id}>• {part.name} — {part.status}</AppText>)}</WidgetShell>;
-if(widget.type==='sessionTimer') return <WidgetShell key={widget.id} widget={widget}><Title style={styles.widgetBig}>{timerMinutes} min</Title><AppText>{timerRunning?'Shop timer running':'Timer ready for next session'}</AppText><Pressable style={styles.primarySmall} onPress={()=>setTimerRunning(!timerRunning)}><AppText style={styles.primarySmallText}>{timerRunning?'Pause':'Start'} Timer</AppText></Pressable></WidgetShell>;
-if(widget.type==='photoFeature') return <WidgetShell key={widget.id} widget={widget}>{featurePhoto?<><Image source={{uri:featurePhoto.uri}} style={styles.photo}/><AppText style={{marginTop:10}}>{featurePhoto.caption}</AppText></>:<AppText>No project photos yet.</AppText>}</WidgetShell>;
-if(widget.type==='creator') return <WidgetShell key={widget.id} widget={widget}><AppText>Draft a build update from recent sessions, photos, tasks, and blockers.</AppText><View style={{height:10}}/><Pressable style={styles.primarySmall}><AppText style={styles.primarySmallText}>Create Update Placeholder</AppText></Pressable></WidgetShell>;
+if(widget.type==='focus') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Session')} hint="Tap to log notes from the next shop session."><Title style={styles.widgetBig}>Today in Shop</Title><AppText>Focus on the next useful move, not the whole build.</AppText><View style={{height:10}} />{summary?.nextSessionChecklist.slice(0,3).map(item=><AppText key={item}>• {item}</AppText>)}</WidgetShell>;
+if(widget.type==='quickActions') return <WidgetShell key={widget.id} widget={widget} hint="Tap an action to jump straight into capture."><View style={styles.quickGrid}>{store.quickActions.filter(a=>a.enabled).map(action=><Pressable key={action.id} style={styles.quickButton} onPress={()=>goAction(action.type)}><MaterialCommunityIcons name={actionIcons[action.type]} size={24} color={colors.orange}/><AppText>{action.title}</AppText></Pressable>)}</View></WidgetShell>;
+if(widget.type==='progress') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.getParent()?.navigate('ProjectEdit')} hint="Tap to update project status, phase, or progress."><Title style={{fontSize:38}}>{p.progress}%</Title><View style={styles.progressBar}><View style={[styles.progressFill,{width:`${p.progress}%`}]} /></View><AppText style={{marginTop:8}}>{p.phase} • {p.status}</AppText></WidgetShell>;
+if(widget.type==='stats') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Tasks')} hint="Tap to review active work."><View style={styles.statLine}><Label>OPEN TASKS</Label><Title style={styles.metric}>{openTasks.length}</Title></View><View style={styles.statLine}><Label>PARTS NEEDED</Label><Title style={styles.metric}>{neededParts.length}</Title></View><View style={styles.statLine}><Label>UPDATED</Label><AppText>{p.updatedAt}</AppText></View></WidgetShell>;
+if(widget.type==='nextSession') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Session')} hint="Tap to capture the next session note.">{summary?.nextSessionChecklist.map(i=><AppText key={i}>• {i}</AppText>)}</WidgetShell>;
+if(widget.type==='blockers') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Tasks')} hint="Tap to clear blockers through tasks.">{blockers.length?blockers.map(i=><AppText key={i}>• {i}</AppText>):<AppText>No major blockers detected in mock data.</AppText>}<View style={{height:8}}/><AppText>AI blocker analysis placeholder for supplier delays, unfinished prep, missing photos, or stale tasks.</AppText></WidgetShell>;
+if(widget.type==='parts') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Parts')} hint="Tap to add or update parts and materials.">{neededParts.length?neededParts.map(part=><AppText key={part.id}>• {part.name}</AppText>):<AppText>No parts marked need to order.</AppText>}</WidgetShell>;
+if(widget.type==='materialsInventory') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Parts')} hint="Tap to manage inventory.">{availableMaterials.map(part=><AppText key={part.id}>• {part.name} — {part.status}</AppText>)}</WidgetShell>;
+if(widget.type==='sessionTimer') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Session')} hint="Tap card to log session notes."><Title style={styles.widgetBig}>{timerMinutes} min</Title><AppText>{timerRunning?'Shop timer running':'Timer ready for next session'}</AppText><Pressable style={styles.primarySmall} onPress={()=>setTimerRunning(!timerRunning)}><AppText style={styles.primarySmallText}>{timerRunning?'Pause':'Start'} Timer</AppText></Pressable></WidgetShell>;
+if(widget.type==='photoFeature') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Photos')} hint="Tap to add tagged progress photos.">{featurePhoto?<><Image source={{uri:featurePhoto.uri}} style={styles.photo}/><AppText style={{marginTop:10}}>{featurePhoto.caption}</AppText></>:<AppText>No project photos yet.</AppText>}</WidgetShell>;
+if(widget.type==='creator') return <WidgetShell key={widget.id} widget={widget} onPress={()=>navigation.navigate('Render')} hint="Tap to open concept/export placeholders."><AppText>Draft a build update from recent sessions, photos, tasks, and blockers.</AppText><View style={{height:10}}/><Pressable style={styles.primarySmall}><AppText style={styles.primarySmallText}>Create Update Placeholder</AppText></Pressable></WidgetShell>;
 return null;
 };
 
@@ -86,7 +103,7 @@ return <Screen>
 <View style={styles.progressRow}><View style={styles.progressBar}><View style={[styles.progressFill,{width:`${p.progress}%`}]} /></View><AppText>{p.progress}%</AppText></View>
 </LinearGradient>
 
-<View style={styles.dock}>{store.quickActions.filter(a=>a.enabled).map(action=><Pressable key={action.id} style={styles.dockButton}><MaterialCommunityIcons name={actionIcons[action.type]} size={22} color={colors.orange}/><AppText style={styles.dockText}>{action.title}</AppText></Pressable>)}</View>
+<View style={styles.dock}>{store.quickActions.filter(a=>a.enabled).map(action=><Pressable key={action.id} style={styles.dockButton} onPress={()=>goAction(action.type)}><MaterialCommunityIcons name={actionIcons[action.type]} size={22} color={colors.orange}/><AppText style={styles.dockText}>{action.title}</AppText></Pressable>)}</View>
 
 {enabledWidgets.map(renderWidget)}
 
@@ -125,9 +142,11 @@ dockText:{fontSize:12},
 compactCard:{minHeight:116},
 expandedCard:{minHeight:170},
 widgetHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:10},
-widgetTitleRow:{flexDirection:'row',alignItems:'center',gap:8},
+widgetTitleRow:{flexDirection:'row',alignItems:'center',gap:8,flex:1},
+headerRight:{flexDirection:'row',alignItems:'center',gap:6},
 sizePill:{backgroundColor:colors.graphite,borderRadius:999,paddingVertical:4,paddingHorizontal:8},
 sizeText:{fontSize:11,color:colors.steel},
+tapHint:{marginTop:12,color:colors.steel,fontSize:12},
 widgetBig:{fontSize:28},
 quickGrid:{flexDirection:'row',flexWrap:'wrap',gap:10},
 quickButton:{width:'30%',minWidth:86,backgroundColor:colors.graphite,borderColor:colors.line,borderWidth:1,borderRadius:radius.md,padding:10,alignItems:'center',gap:6},
