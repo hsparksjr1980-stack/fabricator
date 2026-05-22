@@ -25,6 +25,15 @@ setUri(result.assets[0].uri);
 }
 };
 
+const takePhoto=async()=>{
+const permission=await ImagePicker.requestCameraPermissionsAsync();
+if(!permission.granted)return;
+const result=await ImagePicker.launchCameraAsync({quality:.8});
+if(!result.canceled && result.assets?.[0]){
+setUri(result.assets[0].uri);
+}
+};
+
 const save=()=>{
 if(!caption.trim())return;
 store.addPhoto(caption.trim(),tag.trim()||'General',uri.trim()||undefined);
@@ -38,10 +47,13 @@ return <Screen>
 <Title>Tagged progress</Title>
 <Card>
 <Label>ADD PHOTO NOTE</Label>
-<AppText style={{marginBottom:10}}>Capture shop progress photos and organize them by fabrication system or build stage.</AppText>
+<AppText style={{marginBottom:10}}>Capture fabrication progress directly from the shop floor or upload existing build photos.</AppText>
 <TextInput value={caption} onChangeText={setCaption} placeholder="Photo caption" placeholderTextColor={colors.steel} style={inputStyle}/>
 <TextInput value={tag} onChangeText={setTag} placeholder="Tag/category" placeholderTextColor={colors.steel} style={inputStyle}/>
-<Button title={uri?'Change photo':'Select photo'} variant="ghost" onPress={pickImage}/>
+<View style={{flexDirection:'row',gap:10}}>
+<Button title="Camera" variant="ghost" onPress={takePhoto}/>
+<Button title={uri?'Change Photo':'Gallery'} variant="ghost" onPress={pickImage}/>
+</View>
 {uri?<Image source={{uri}} style={{height:180,borderRadius:radius.md,marginTop:12}}/>:null}
 <View style={{height:12}} />
 <Button title="Add photo note" onPress={save}/>
