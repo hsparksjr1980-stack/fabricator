@@ -61,7 +61,7 @@ const baseWidgets:DashboardWidget[] = [
 {id:'quick',type:'quickActions',title:'Quick Actions',enabled:true,size:'compact'},
 {id:'progress',type:'progress',title:'Project Progress',enabled:true,size:'compact'},
 {id:'stats',type:'stats',title:'Build Stats',enabled:true,size:'compact'},
-{id:'next',type:'nextSession',title:'Next Session AI',enabled:true,size:'expanded'},
+{id:'next',type:'nextSession',title:'Next Session',enabled:true,size:'expanded'},
 {id:'blockers',type:'blockers',title:'Progress Blockers',enabled:true,size:'expanded'},
 {id:'parts',type:'parts',title:'Parts Needed',enabled:true,size:'compact'},
 {id:'materials',type:'materialsInventory',title:'Materials Inventory',enabled:true,size:'compact'},
@@ -91,6 +91,7 @@ return copy;
 const currentLayout=(s:Store):SavedLayout=>({preset:s.dashboardPreset,widgets:s.dashboardWidgets,quickActions:s.quickActions});
 const currentData=(s:Store):PersistedData=>({selectedProjectId:s.selectedProjectId,projects:s.projects,sessions:s.sessions,voiceNotes:s.voiceNotes,tasks:s.tasks,parts:s.parts,photos:s.photos});
 const persistSoon=(get:()=>Store)=>setTimeout(()=>get().saveAppData(),0);
+const persistLayoutSoon=(get:()=>Store)=>setTimeout(()=>get().saveDashboardLayout(),0);
 
 export const useFabricatorStore = create<Store>()((set,get)=>(
 {
@@ -107,11 +108,11 @@ addPart:(name,system,vendor)=>set(s=>{persistSoon(get);return {parts:[{id:nextId
 addPhoto:(caption,tag,uri)=>set(s=>{persistSoon(get);return {photos:[{id:nextId('ph'),projectId:s.selectedProjectId,caption,tag,uri:uri||'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=900',createdAt:today()},...s.photos]}}),
 cycleTask:(id)=>set(s=>{persistSoon(get);return {tasks:s.tasks.map(t=>t.id===id?{...t,status:t.status==='To Do'?'In Progress':t.status==='In Progress'?'Done':'To Do'}:t)}}),
 cyclePart:(id)=>set(s=>{persistSoon(get);return {parts:s.parts.map(p=>p.id===id?{...p,status:p.status==='Need to Order'?'On Hand':p.status==='On Hand'?'Installed':'Need to Order'}:p)}}),
-toggleWidget:(id)=>set(s=>({dashboardWidgets:s.dashboardWidgets.map(w=>w.id===id?{...w,enabled:!w.enabled}:w)})),
-toggleWidgetSize:(id)=>set(s=>({dashboardWidgets:s.dashboardWidgets.map(w=>w.id===id?{...w,size:w.size==='compact'?'expanded':'compact'}:w)})),
-moveWidget:(id,direction)=>set(s=>({dashboardWidgets:reorder(s.dashboardWidgets,id,direction)})),
-applyDashboardPreset:(preset)=>set({dashboardPreset:preset,dashboardWidgets:presetWidgets[preset]}),
-toggleQuickAction:(id)=>set(s=>({quickActions:s.quickActions.map(a=>a.id===id?{...a,enabled:!a.enabled}:a)})),
+toggleWidget:(id)=>set(s=>{persistLayoutSoon(get);return {dashboardWidgets:s.dashboardWidgets.map(w=>w.id===id?{...w,enabled:!w.enabled}:w)}}),
+toggleWidgetSize:(id)=>set(s=>{persistLayoutSoon(get);return {dashboardWidgets:s.dashboardWidgets.map(w=>w.id===id?{...w,size:w.size==='compact'?'expanded':'compact'}:w)}}),
+moveWidget:(id,direction)=>set(s=>{persistLayoutSoon(get);return {dashboardWidgets:reorder(s.dashboardWidgets,id,direction)}}),
+applyDashboardPreset:(preset)=>{set({dashboardPreset:preset,dashboardWidgets:presetWidgets[preset]});persistLayoutSoon(get);},
+toggleQuickAction:(id)=>set(s=>{persistLayoutSoon(get);return {quickActions:s.quickActions.map(a=>a.id===id?{...a,enabled:!a.enabled}:a)}}),
 saveDashboardLayout:async()=>{const s=get(); await dashboardLayoutStorage.save(storageKey(s.selectedProjectId),currentLayout(s));},
 loadDashboardLayout:async()=>{const s=get(); const saved=await dashboardLayoutStorage.load(storageKey(s.selectedProjectId)); if(saved){set({dashboardPreset:saved.preset,dashboardWidgets:saved.widgets,quickActions:saved.quickActions});}},
 saveAppData:async()=>{await appDataStorage.save(currentData(get()));},
