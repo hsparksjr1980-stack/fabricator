@@ -49,11 +49,10 @@ const storageKey=(projectId:string)=>`dashboard:${projectId}`;
 
 const quickActions:QuickAction[] = [
 {id:'qa-session',type:'session',title:'Session',enabled:true},
-{id:'qa-voice',type:'voice',title:'Voice',enabled:true},
 {id:'qa-task',type:'task',title:'Task',enabled:true},
 {id:'qa-part',type:'part',title:'Part',enabled:true},
 {id:'qa-photo',type:'photo',title:'Photo',enabled:true},
-{id:'qa-render',type:'render',title:'Concept',enabled:false}
+{id:'qa-render',type:'render',title:'Advisor',enabled:true}
 ];
 
 const baseWidgets:DashboardWidget[] = [
