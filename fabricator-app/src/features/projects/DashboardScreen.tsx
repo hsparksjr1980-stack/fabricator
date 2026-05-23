@@ -71,7 +71,10 @@ const featurePhoto=store.photos.find(photo=>photo.projectId===store.selectedProj
 const blockers=[...neededParts.map(part=>`Order ${part.name}`),...openTasks.slice(0,2).map(task=>task.title)];
 const nextItems=[...inProgressTasks.map(t=>t.title),...(summary?.nextSessionChecklist||[])].slice(0,5);
 const goAction=(type:string)=>{ if(type==='session')navigation.navigate('Session'); if(type==='voice')navigation.navigate('Voice'); if(type==='task')navigation.navigate('Tasks'); if(type==='part')navigation.navigate('Parts'); if(type==='photo')navigation.navigate('Photos'); if(type==='render')navigation.navigate('Render'); };
-if(!p)return null;
+if(!p){
+  navigation.navigate('Welcome');
+  return null;
+}
 
 const shell=(widget:DashboardWidget,children:React.ReactNode,onPress?:()=>void,hint?:string,featured?:boolean)=><WidgetShell key={widget.id} widget={widget} editMode={editMode} onEnterEdit={()=>setEditMode(true)} onPress={editMode?undefined:onPress} hint={hint} featured={featured}>{children}</WidgetShell>;
 const renderWidget=(widget:DashboardWidget)=>{

@@ -1,23 +1,31 @@
 import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+
 import { NavigationContainer } from '@react-navigation/native';
+
 import { AppNavigator } from './src/navigation/AppNavigator';
+
 import { useFabricatorStore } from './src/state/useFabricatorStore';
+
 import { colors } from './src/theme/theme';
 
-export default function App() {
-  const hasLoadedAppData = useFabricatorStore(state => state.hasLoadedAppData);
-  const loadAppData = useFabricatorStore(state => state.loadAppData);
+import { AuthProvider, useAuth } from './src/auth/AuthProvider';
+import { AuthScreen } from './src/auth/AuthScreen';
 
-  useEffect(() => {
-    loadAppData();
-  }, [loadAppData]);
+function RootApp() {
+  const { session, isLoading } = useAuth();
 
-  if (!hasLoadedAppData) {
+  if (isLoading) {
     return (
-      <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.black }}>
-        <StatusBar style="light" backgroundColor={colors.black} />
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.black,
+        }}
+      >
         <ActivityIndicator color={colors.orange} />
       </View>
     );
@@ -26,7 +34,44 @@ export default function App() {
   return (
     <NavigationContainer>
       <StatusBar style="light" backgroundColor={colors.black} />
-      <AppNavigator />
+
+      {session ? <AppNavigator /> : <AuthScreen />}
     </NavigationContainer>
+  );
+}
+
+export default function App() {
+  const hasLoadedAppData = useFabricatorStore(
+    state => state.hasLoadedAppData
+  );
+
+  const loadAppData = useFabricatorStore(
+    state => state.loadAppData
+  );
+
+  useEffect(() => {
+    loadAppData();
+  }, [loadAppData]);
+
+  if (!hasLoadedAppData) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.black,
+        }}
+      >
+        <StatusBar style="light" backgroundColor={colors.black} />
+        <ActivityIndicator color={colors.orange} />
+      </View>
+    );
+  }
+
+  return (
+    <AuthProvider>
+      <RootApp />
+    </AuthProvider>
   );
 }
