@@ -6,27 +6,27 @@ import { AppText, Label, Title } from '@/components/Text';
 const workshopRows = [
   'Default dashboard preset',
   'Preferred project category',
-  'Units placeholder',
+  'Units configuration',
   'Auto-save status',
 ];
 
 const documentationRows = [
   'Timeline activity preferences',
-  'Photo quality placeholder',
+  'Photo quality',
   'Milestone photo defaults',
   'Cover photo behavior',
 ];
 
 const creatorRows = [
-  'Build recap placeholder',
-  'Export progress placeholder',
-  'Social/content workflow placeholder',
+  'Build recaps',
+  'Export progress',
+  'Social/content workflow',
 ];
 
 const accountRows = [
   'Email/account',
   'Logout',
-  'Future cloud sync placeholder',
+  'Cloud sync',
 ];
 
 const futureRows = [
@@ -63,7 +63,7 @@ function SettingsRow({ title, disabled = false }: { title: string; disabled?: bo
       </View>
 
       <AppText style={{ color: '#7C828A' }}>
-        {disabled ? 'Coming Soon' : 'Configured'}
+        {disabled ? 'Unavailable' : 'Active'}
       </AppText>
     </View>
   );
@@ -115,7 +115,7 @@ export function SettingsScreen() {
         </AppText>
 
         <AppText style={{ color: '#6B7280', marginTop: 6 }}>
-          Version 0.2.0 MVP
+          Version 0.2.0
         </AppText>
       </View>
 
@@ -132,7 +132,7 @@ export function SettingsScreen() {
         <Label style={{ color: '#D97706', marginBottom: 12 }}>PLATFORM STATUS</Label>
 
         <AppText style={{ color: '#E5E7EB', lineHeight: 22 }}>
-          Fabricator is currently running in local MVP mode with placeholders for cloud services, AI-assisted documentation, creator workflows, and advanced progress tracking.
+          Fabricator supports project documentation, activity tracking, milestone management, creator workflows, and organized build history across fabrication and restoration projects.
         </AppText>
       </Card>
 
@@ -159,7 +159,7 @@ export function SettingsScreen() {
         <Label style={{ color: '#D97706', marginBottom: 12 }}>BUILD HISTORY</Label>
 
         <AppText style={{ color: '#C9CDD2', lineHeight: 22 }}>
-          Activity preferences now focus on build history, project documentation, milestone tracking, and creator-oriented progress management.
+          Activity tracking focuses on long-term project documentation, milestone progression, fabrication workflows, and creator-oriented build management.
         </AppText>
       </Card>
     </Screen>
