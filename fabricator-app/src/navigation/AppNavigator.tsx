@@ -13,6 +13,7 @@ import { PartsScreen } from '@/features/parts/PartsScreen';
 import { PhotosScreen } from '@/features/photos/PhotosScreen';
 import { RenderScreen } from '@/features/rendering/RenderScreen';
 import { SettingsScreen } from '@/features/settings/SettingsScreen';
+import { AppText } from '@/components/Text';
 
 const Tabs = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -28,7 +29,24 @@ const tabIcons: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   Settings: 'cog'
 };
 
-const HeaderLogo=()=> <Image source={require('../../assets/fabricator-logo.png')} style={{width:34,height:34,resizeMode:'contain'}} />;
+const HeaderBrand=()=> (
+  <View style={{flexDirection:'row',alignItems:'center',gap:10}}>
+    <Image
+      source={require('../../assets/fabricator-logo.png')}
+      style={{width:38,height:38,resizeMode:'contain'}}
+    />
+
+    <View>
+      <AppText style={{color:colors.white,fontSize:18,fontWeight:'900',letterSpacing:0.5}}>
+        Fabricator
+      </AppText>
+
+      <AppText style={{color:colors.steel,fontSize:10,fontWeight:'700',marginTop:-2}}>
+        Garage Workflow OS
+      </AppText>
+    </View>
+  </View>
+);
 
 function MainTabs() {
   return (
@@ -36,7 +54,7 @@ function MainTabs() {
       screenOptions={({ route, navigation }) => ({
         headerStyle: { backgroundColor: colors.black },
         headerTintColor: colors.white,
-        headerTitle: () => <HeaderLogo />,
+        headerTitle: () => <HeaderBrand />,
         headerShadowVisible: false,
         sceneStyle: { backgroundColor: colors.black },
         headerLeft: () => route.name === 'Dashboard' ? null : (
@@ -96,7 +114,7 @@ export function AppNavigator() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.black },
         headerTintColor: colors.white,
-        headerTitle: () => <HeaderLogo />,
+        headerTitle: () => <HeaderBrand />,
         headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.black }
       }}
