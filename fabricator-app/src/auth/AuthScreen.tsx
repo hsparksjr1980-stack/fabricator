@@ -14,7 +14,7 @@ import { colors, radius, spacing } from '@/theme/theme';
 import { useAuth } from './AuthProvider';
 
 export function AuthScreen() {
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, resetPassword } = useAuth();
 
   const [mode, setMode] = useState<'signin' | 'signup'>(
     'signin'
@@ -57,6 +57,34 @@ export function AuthScreen() {
     }
   }
 
+  async function handleForgotPassword() {
+    if (!email) {
+      Alert.alert(
+        'Email required',
+        'Enter your email address to reset your password.'
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      await resetPassword(email);
+
+      Alert.alert(
+        'Password reset sent',
+        'Check your email for password reset instructions.'
+      );
+    } catch (error: any) {
+      Alert.alert(
+        'Reset Error',
+        error.message ?? 'Unable to send password reset email.'
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   return (
     <Screen>
       <Label>Fabricator</Label>
@@ -86,6 +114,14 @@ export function AuthScreen() {
           onChangeText={setPassword}
           style={styles.input}
         />
+
+        {mode === 'signin' && (
+          <Pressable onPress={handleForgotPassword}>
+            <AppText style={styles.forgotPasswordText}>
+              Forgot password?
+            </AppText>
+          </Pressable>
+        )}
 
         <Pressable
           onPress={handleSubmit}
@@ -136,6 +172,14 @@ const styles = StyleSheet.create({
     color: colors.white,
     padding: spacing.md,
     fontSize: 16,
+  },
+
+  forgotPasswordText: {
+    color: colors.orange,
+    textAlign: 'right',
+    marginTop: -4,
+    marginBottom: spacing.sm,
+    fontSize: 13,
   },
 
   button: {
