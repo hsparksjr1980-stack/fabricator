@@ -1,6 +1,6 @@
 export type ProjectCategory = 'Vehicle Build' | 'Fabrication' | 'Woodworking' | 'Restoration' | 'Creator Build' | 'Metal Fabrication' | 'Blacksmithing';
 export type ProjectPhase = 'Planning' | 'Teardown' | 'Fabrication' | 'Mockup' | 'Assembly' | 'Finishing' | 'Complete';
-export type ProjectStatus = 'Active' | 'Paused' | 'Blocked' | 'Done' | 'In Progress';
+export type ProjectStatus = 'Active' | 'Paused' | 'Completed' | 'Archived' | 'Blocked' | 'Done' | 'In Progress';
 export type TaskStatus = 'To Do' | 'In Progress' | 'Done';
 export type PartStatus = 'Installed' | 'On Hand' | 'Need to Order' | 'Ordered';
 
@@ -21,6 +21,8 @@ export interface Project {
  progress: number;
  hook: string;
  updatedAt: string;
+ completedAt?: string;
+ archivedAt?: string;
 }
 
 export interface GarageSession {
