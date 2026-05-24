@@ -57,7 +57,7 @@ const quickActions:QuickAction[] = [
 
 const baseWidgets:DashboardWidget[] = [
 {id:'focus',type:'focus',title:'Today in Shop',enabled:true,size:'expanded'},
-{id:'quick',type:'quickActions',title:'Quick Actions',enabled:true,size:'compact'},
+{id:'quick',type:'quickActions',title:'Quick Actions',enabled:false,size:'compact'},
 {id:'progress',type:'progress',title:'Project Progress',enabled:true,size:'compact'},
 {id:'stats',type:'stats',title:'Build Stats',enabled:true,size:'compact'},
 {id:'next',type:'nextSession',title:'Next Session',enabled:true,size:'expanded'},
@@ -71,11 +71,11 @@ const baseWidgets:DashboardWidget[] = [
 
 const presetWidgets:Record<DashboardPreset,DashboardWidget[]> = {
 Fabricator: baseWidgets,
-Woodworker: baseWidgets.map(w=>({...w,enabled:['focus','quick','progress','next','materials','photo','timer'].includes(w.id)})),
-Restoration: baseWidgets.map(w=>({...w,enabled:['focus','quick','progress','stats','next','parts','photo','blockers'].includes(w.id)})),
-'Content Creator': baseWidgets.map(w=>({...w,enabled:['focus','quick','photo','creator','progress','next'].includes(w.id),size:w.id==='photo'?'expanded':w.size})),
-'Race Build': baseWidgets.map(w=>({...w,enabled:['focus','quick','progress','stats','next','parts','blockers','timer'].includes(w.id)})),
-'Motorcycle Build': baseWidgets.map(w=>({...w,enabled:['focus','quick','progress','next','parts','materials','photo','timer'].includes(w.id)}))
+Woodworker: baseWidgets.map(w=>({...w,enabled:['focus','progress','next','materials','photo','timer'].includes(w.id)})),
+Restoration: baseWidgets.map(w=>({...w,enabled:['focus','progress','stats','next','parts','photo','blockers'].includes(w.id)})),
+'Content Creator': baseWidgets.map(w=>({...w,enabled:['focus','photo','creator','progress','next'].includes(w.id),size:w.id==='photo'?'expanded':w.size})),
+'Race Build': baseWidgets.map(w=>({...w,enabled:['focus','progress','stats','next','parts','blockers','timer'].includes(w.id)})),
+'Motorcycle Build': baseWidgets.map(w=>({...w,enabled:['focus','progress','next','parts','materials','photo','timer'].includes(w.id)}))
 };
 
 const reorder = (items:DashboardWidget[], id:string, direction:'up'|'down') => {
@@ -105,7 +105,7 @@ addVoiceNote:(transcript)=>set(s=>{persistSoon(get);return {voiceNotes:[{id:next
 addTask:(title,system,createPart)=>set(s=>{
 persistSoon(get);
 const newTask={id:nextId('t'),projectId:s.selectedProjectId,title,system,status:'To Do' as const};
-const shouldCreatePart=createPart||['Parts','Wiring'].includes(system);
+const shouldCreatePart=createPart;
 const newParts=shouldCreatePart?[{id:nextId('pa'),projectId:s.selectedProjectId,name:title,system,status:'Need to Order' as const}]:[];
 return {tasks:[newTask,...s.tasks],parts:[...newParts,...s.parts]}
 }),
