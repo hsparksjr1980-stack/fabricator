@@ -9,6 +9,7 @@ import { useFabricatorStore } from '@/state/useFabricatorStore';
 import { colors, radius, spacing } from '@/theme/theme';
 
 const systems=['Chassis','Engine','Electrical','Body','Interior','Shop Supplies'];
+const statuses=['To Buy','On Shelf','Installed'] as const;
 
 function buildSearchQuery(part:any){
 return [part.name,part.partNumber,part.vendor].filter(Boolean).join(' ')
@@ -41,6 +42,7 @@ const [partNumber,setPartNumber]=useState('');
 const [vendor,setVendor]=useState('');
 const [description,setDescription]=useState('');
 const [system,setSystem]=useState('Chassis');
+const [activeStatus,setActiveStatus]=useState<typeof statuses[number]>('To Buy');
 
 const parts=store.parts.filter(p=>p.projectId===store.selectedProjectId);
 
@@ -49,6 +51,8 @@ const grouped=useMemo(()=>({
 'On Shelf':parts.filter(p=>p.status==='On Hand'||p.status==='Ordered'),
 Installed:parts.filter(p=>p.status==='Installed')
 }),[parts]);
+
+const visibleParts=grouped[activeStatus]||[];
 
 const save=()=>{
 if(!name.trim())return;
@@ -76,8 +80,13 @@ return <Screen>
 <Button title="Save Part" onPress={save}/>
 </Card>
 
-{Object.entries(grouped).map(([section,list])=><View key={section} style={styles.section}><View style={styles.sectionHeader}><Label>{section}</Label><AppText>{list.length} items</AppText></View>{list.length?list.map(p=><PartRow key={p.id} part={p} onPress={()=>store.cyclePart(p.id)} />):<Card><AppText>No items here yet.</AppText></Card>}</View>)}
-<View style={{height:60}} />
+<View style={styles.segmentBar}>{statuses.map(status=><Pressable key={status} onPress={()=>setActiveStatus(status)} style={[styles.segment,status===activeStatus&&styles.segmentActive]}><AppText style={[styles.segmentText,status===activeStatus&&styles.segmentTextActive]}>{status}</AppText><View style={[styles.countBubble,status===activeStatus&&styles.countBubbleActive]}><AppText style={styles.countText}>{grouped[status]?.length||0}</AppText></View></Pressable>)}</View>
+
+<View style={styles.sectionHeader}><View><Label>{activeStatus}</Label><Title style={styles.sectionTitle}>{visibleParts.length} items</Title></View><AppText style={styles.helper}>Tap item to cycle status.</AppText></View>
+
+{visibleParts.length?visibleParts.map(p=><PartRow key={p.id} part={p} onPress={()=>store.cyclePart(p.id)} />):<Card><AppText>No items here yet.</AppText></Card>}
+
+<View style={{height:80}} />
 </Screen>
 }
 
@@ -94,8 +103,17 @@ chip:{backgroundColor:colors.charcoal,borderColor:colors.line,borderWidth:1,bord
 chipActive:{backgroundColor:colors.orangeSoft,borderColor:colors.orange},
 chipText:{fontSize:12,color:colors.muted,fontWeight:'800'},
 chipTextActive:{color:colors.white},
-section:{marginBottom:18},
-sectionHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:10},
+segmentBar:{flexDirection:'row',gap:10,marginBottom:18},
+segment:{flex:1,backgroundColor:colors.panel,borderWidth:1,borderColor:colors.line,borderRadius:radius.lg,paddingVertical:14,paddingHorizontal:10,alignItems:'center',gap:6},
+segmentActive:{backgroundColor:colors.orangeSoft,borderColor:colors.orange},
+segmentText:{fontSize:13,color:colors.steel,fontWeight:'900'},
+segmentTextActive:{color:colors.white},
+countBubble:{minWidth:28,paddingHorizontal:8,paddingVertical:4,borderRadius:999,backgroundColor:colors.graphite,alignItems:'center'},
+countBubbleActive:{backgroundColor:colors.orange},
+countText:{fontSize:11,color:colors.white,fontWeight:'900'},
+sectionHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'flex-end',marginBottom:12},
+sectionTitle:{fontSize:26,lineHeight:32},
+helper:{fontSize:12,color:colors.steel},
 partRow:{backgroundColor:colors.panel,borderColor:colors.line,borderWidth:1,borderRadius:radius.lg,padding:16,marginBottom:10,flexDirection:'row',gap:12,alignItems:'center'},
 partTitle:{fontSize:18,color:colors.white,fontWeight:'900'},
 partNumber:{marginTop:4,color:colors.orange,fontWeight:'800'},
