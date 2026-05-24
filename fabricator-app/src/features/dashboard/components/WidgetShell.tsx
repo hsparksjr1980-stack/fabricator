@@ -7,7 +7,7 @@ import { useFabricatorStore } from '@/state/useFabricatorStore';
 import { DashboardWidget } from '@/types/models';
 import { colors } from '@/theme/theme';
 
-const widgetIcons:any={focus:'target',quickActions:'lightning-bolt-outline',progress:'chart-donut',stats:'view-dashboard-outline',nextSession:'clipboard-list-outline',blockers:'alert-octagon-outline',parts:'package-variant-closed',materialsInventory:'warehouse',sessionTimer:'timer-outline',photoFeature:'image-multiple-outline',creator:'share-variant-outline'};
+const widgetIcons:any={focus:'target',quickActions:'lightning-bolt-outline',progress:'chart-donut',stats:'view-dashboard-outline',nextSession:'clipboard-list-outline',blockers:'alert-octagon-outline',parts:'package-variant-closed',materialsInventory:'warehouse',recentActivity:'timeline-clock-outline',photoFeature:'image-multiple-outline',creator:'share-variant-outline'};
 
 export function WidgetShell({widget,children,onPress,hint,featured,editMode,onEnterEdit}:{widget:DashboardWidget;children:React.ReactNode;onPress?:()=>void;hint?:string;featured?:boolean;editMode:boolean;onEnterEdit:()=>void}){
 const store=useFabricatorStore();

@@ -8,7 +8,7 @@ category:'Metal Fabrication',
 phase:'Fabrication',
 status:'Active',
 progress:38,
-hook:'A polished demo build showing how Fabricator remembers sessions, parts, photos, blockers, and the next shop plan.',
+hook:'A polished demo build showing how Fabricator remembers tasks, parts, photos, blockers, and recent shop activity.',
 updatedAt:'2026-05-22'
 },
 {
@@ -53,20 +53,20 @@ export const voiceNotes: VoiceNote[] = [
 ];
 
 export const tasks: BuildTask[] = [
-{ id:'t1', projectId:'p1', title:'Re-check left rear diagonal fitment', system:'Chassis', status:'In Progress' },
-{ id:'t2', projectId:'p1', title:'Mock up pedal box and steering shaft', system:'Controls', status:'To Do' },
-{ id:'t3', projectId:'p1', title:'Deburr and clean base rails', system:'Fabrication Prep', status:'Done' },
-{ id:'t4', projectId:'p1', title:'Add gusset layout marks after pedal test fit', system:'Chassis', status:'To Do' }
+{ id:'t1', projectId:'p1', title:'Re-check left rear diagonal fitment', system:'Chassis', status:'In Progress', createdAt:'2026-05-22T09:15:00.000Z', updatedAt:'2026-05-22T16:40:00.000Z' },
+{ id:'t2', projectId:'p1', title:'Mock up pedal box and steering shaft', system:'Controls', status:'To Do', createdAt:'2026-05-22T15:10:00.000Z', updatedAt:'2026-05-22T15:10:00.000Z' },
+{ id:'t3', projectId:'p1', title:'Deburr and clean base rails', system:'Fabrication Prep', status:'Done', createdAt:'2026-05-21T10:00:00.000Z', updatedAt:'2026-05-22T11:25:00.000Z' },
+{ id:'t4', projectId:'p1', title:'Add gusset layout marks after pedal test fit', system:'Chassis', status:'To Do', createdAt:'2026-05-22T16:55:00.000Z', updatedAt:'2026-05-22T16:55:00.000Z' }
 ];
 
 export const parts: Part[] = [
-{ id:'pa1', projectId:'p1', name:'3/4 inch heims', system:'Steering', status:'Need to Order', vendor:'Speedway Motors' },
-{ id:'pa2', projectId:'p1', name:'1 inch DOM tube stock', system:'Chassis', status:'On Hand' },
-{ id:'pa3', projectId:'p1', name:'Pedal box tabs', system:'Controls', status:'On Hand' },
-{ id:'pa4', projectId:'p1', name:'Rear axle bearing hangers', system:'Driveline', status:'Installed' }
+{ id:'pa1', projectId:'p1', name:'3/4 inch heims', system:'Steering', status:'Need to Order', vendor:'Speedway Motors', createdAt:'2026-05-22T14:15:00.000Z', updatedAt:'2026-05-22T14:15:00.000Z' },
+{ id:'pa2', projectId:'p1', name:'1 inch DOM tube stock', system:'Chassis', status:'On Hand', createdAt:'2026-05-21T08:45:00.000Z', updatedAt:'2026-05-22T08:30:00.000Z' },
+{ id:'pa3', projectId:'p1', name:'Pedal box tabs', system:'Controls', status:'On Hand', createdAt:'2026-05-21T13:20:00.000Z', updatedAt:'2026-05-21T13:20:00.000Z' },
+{ id:'pa4', projectId:'p1', name:'Rear axle bearing hangers', system:'Driveline', status:'Installed', createdAt:'2026-05-20T11:00:00.000Z', updatedAt:'2026-05-22T10:45:00.000Z' }
 ];
 
 export const photos: BuildPhoto[] = [
-{ id:'ph1', projectId:'p1', uri:'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=900', tag:'Chassis', caption:'Tube stock staged and marked for base rail layout.', createdAt:'2026-05-21' },
-{ id:'ph2', projectId:'p1', uri:'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=900', tag:'Mockup', caption:'Main hoop tacked in place before diagonal fitment check.', createdAt:'2026-05-22' }
+{ id:'ph1', projectId:'p1', uri:'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=900', tag:'Chassis', caption:'Tube stock staged and marked for base rail layout.', createdAt:'2026-05-21T12:10:00.000Z' },
+{ id:'ph2', projectId:'p1', uri:'https://images.unsplash.com/photo-1601584115197-04ecc0da31d7?w=900', tag:'Mockup', caption:'Main hoop tacked in place before diagonal fitment check.', createdAt:'2026-05-22T17:20:00.000Z' }
 ];

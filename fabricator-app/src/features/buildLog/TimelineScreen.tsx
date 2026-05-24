@@ -9,15 +9,20 @@ import { colors, radius, shadows, spacing } from '@/theme/theme';
 
 const hero='https://images.unsplash.com/photo-1504307651254-35680f356dfd?q=80&w=1400&auto=format&fit=crop';
 
+function formatTimelineDate(value:string){
+const date=new Date(value);
+if(Number.isNaN(date.getTime())) return value;
+return date.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'});
+}
+
 export function TimelineScreen(){
 const s=useFabricatorStore();
 
 const items=[
-...s.sessions.filter(x=>x.projectId===s.selectedProjectId).map(x=>({id:x.id,kind:'Session',title:x.title,meta:x.notes,date:x.createdAt,sort:x.createdAt,icon:'hammer-wrench'})),
-...s.tasks.filter(x=>x.projectId===s.selectedProjectId).map(x=>({id:x.id,kind:'Task',title:x.title,meta:x.status,date:'Updated now',sort:'9999',icon:'clipboard-check'})),
-...s.parts.filter(x=>x.projectId===s.selectedProjectId).map(x=>({id:x.id,kind:'Part',title:x.name,meta:x.status,date:'Updated now',sort:'9998',icon:'package-variant'})),
+...s.tasks.filter(x=>x.projectId===s.selectedProjectId).map(x=>({id:x.id,kind:'Task',title:x.title,meta:`${x.system} • ${x.status}`,date:x.updatedAt||x.createdAt||'',sort:x.updatedAt||x.createdAt||'',icon:'clipboard-check'})),
+...s.parts.filter(x=>x.projectId===s.selectedProjectId).map(x=>({id:x.id,kind:'Part',title:x.name,meta:`${x.system} • ${x.status}`,date:x.updatedAt||x.createdAt||'',sort:x.updatedAt||x.createdAt||'',icon:'package-variant'})),
 ...s.photos.filter(x=>x.projectId===s.selectedProjectId).map(x=>({id:x.id,kind:'Photo',title:x.caption,meta:x.tag,date:x.createdAt,sort:x.createdAt,icon:'camera'}))
-].sort((a,b)=>b.sort.localeCompare(a.sort));
+].filter(item=>item.sort).sort((a,b)=>new Date(b.sort).getTime()-new Date(a.sort).getTime());
 
 return <Screen>
 <ImageBackground source={{uri:hero}} style={styles.hero} imageStyle={styles.heroImage}>
@@ -25,13 +30,13 @@ return <Screen>
 <View style={styles.heroContent}>
 <Label>BUILD CHRONOLOGY</Label>
 <Title style={styles.heroTitle}>Workshop Timeline</Title>
-<AppText style={styles.heroCopy}>A living fabrication archive that tracks sessions, components, photos, materials, and progress milestones.</AppText>
+<AppText style={styles.heroCopy}>A living fabrication archive built passively from tasks, components, photos, materials, and progress milestones.</AppText>
 </View>
 </ImageBackground>
 
 <View style={styles.sectionHeader}>
 <Label>DOCUMENTED HISTORY</Label>
-<AppText>Operational build intelligence</AppText>
+<AppText>Passive activity from normal shop updates</AppText>
 </View>
 
 <View style={styles.timelineRail}/>
@@ -47,7 +52,7 @@ return <Screen>
 <Label>{i.kind}</Label>
 <Title style={styles.cardTitle}>{i.title}</Title>
 </View>
-<View style={styles.dateBadge}><AppText style={styles.dateText}>{i.date}</AppText></View>
+<View style={styles.dateBadge}><AppText style={styles.dateText}>{formatTimelineDate(i.date)}</AppText></View>
 </View>
 
 <AppText style={styles.cardMeta}>{i.meta}</AppText>

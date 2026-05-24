@@ -4,10 +4,10 @@ export type ProjectStatus = 'Active' | 'Paused' | 'Blocked' | 'Done' | 'In Progr
 export type TaskStatus = 'To Do' | 'In Progress' | 'Done';
 export type PartStatus = 'Installed' | 'On Hand' | 'Need to Order' | 'Ordered';
 
-export type DashboardWidgetType = 'focus' | 'quickActions' | 'progress' | 'stats' | 'nextSession' | 'blockers' | 'parts' | 'materialsInventory' | 'sessionTimer' | 'photoFeature' | 'creator';
+export type DashboardWidgetType = 'focus' | 'quickActions' | 'progress' | 'stats' | 'nextSession' | 'blockers' | 'parts' | 'materialsInventory' | 'recentActivity' | 'photoFeature' | 'creator';
 export type DashboardWidgetSize = 'compact' | 'expanded';
 export type DashboardPreset = 'Fabricator' | 'Woodworker' | 'Restoration' | 'Content Creator' | 'Race Build' | 'Motorcycle Build';
-export type QuickActionType = 'session' | 'voice' | 'task' | 'part' | 'photo' | 'render';
+export type QuickActionType = 'voice' | 'task' | 'part' | 'photo' | 'render';
 
 export interface DashboardWidget { id:string; type:DashboardWidgetType; title:string; enabled:boolean; size:DashboardWidgetSize; }
 export interface QuickAction { id:string; type:QuickActionType; title:string; enabled:boolean; }
@@ -49,7 +49,8 @@ export interface BuildTask {
  title: string;
  system: string;
  status: TaskStatus;
- sessionId?: string;
+ createdAt?: string;
+ updatedAt?: string;
 }
 
 export interface Part {
@@ -63,7 +64,8 @@ export interface Part {
  description?: string;
  notes?: string;
  orderedAt?: string;
- sessionId?: string;
+ createdAt?: string;
+ updatedAt?: string;
 }
 
 export interface BuildPhoto {
@@ -85,7 +87,7 @@ export interface AiSummary {
 
 export type TimelineItem = {
  id: string;
- kind: 'session'|'task'|'part'|'photo';
+ kind: 'task'|'part'|'photo';
  title: string;
  meta: string;
  date: string;

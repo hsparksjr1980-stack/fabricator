@@ -6,7 +6,6 @@ import { colors, radius } from '@/theme/theme';
 import { WelcomeScreen } from '@/features/projects/WelcomeScreen';
 import { DashboardScreen } from '@/features/projects/DashboardScreen';
 import { ProjectEditScreen } from '@/features/projects/ProjectEditScreen';
-import { SessionScreen } from '@/features/sessions/SessionScreen';
 import { TimelineScreen } from '@/features/buildLog/TimelineScreen';
 import { TasksScreen } from '@/features/tasks/TasksScreen';
 import { PartsScreen } from '@/features/parts/PartsScreen';
@@ -22,7 +21,6 @@ const tabIcons: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   Dashboard: 'view-dashboard',
   Tasks: 'clipboard-check',
   Parts: 'package-variant',
-  Session: 'calendar-check',
   Photos: 'image-multiple',
   Advisor: 'robot-industrial',
   Log: 'timeline-text',
@@ -105,7 +103,6 @@ function MainTabs() {
 />
       <Tabs.Screen name="Tasks" component={TasksScreen} />
       <Tabs.Screen name="Parts" component={PartsScreen} />
-      <Tabs.Screen name="Session" component={SessionScreen} options={{ title: 'Sessions' }} />
       <Tabs.Screen name="Photos" component={PhotosScreen} />
       <Tabs.Screen name="Advisor" component={RenderScreen} options={{ title: 'Shop Assistant' }} />
       <Tabs.Screen name="Log" component={TimelineScreen} />
