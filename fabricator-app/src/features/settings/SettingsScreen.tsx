@@ -1,4 +1,5 @@
-import { View } from 'react-native';
+import { View, Pressable } from 'react-native';
+import { useAuth } from '@/auth/AuthProvider';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { AppText, Label, Title } from '@/components/Text';
@@ -25,7 +26,6 @@ const creatorRows = [
 
 const accountRows = [
   'Email/account',
-  'Logout',
   'Cloud sync',
 ];
 
@@ -92,7 +92,13 @@ function SettingsSection({
       <Label style={{ color: '#D97706', marginBottom: 14 }}>{title}</Label>
 
       {rows.map((row, index) => (
-        <View key={row} style={{ borderBottomWidth: index === rows.length - 1 ? 0 : 1, borderBottomColor: '#2A2E33' }}>
+        <View
+          key={row}
+          style={{
+            borderBottomWidth: index === rows.length - 1 ? 0 : 1,
+            borderBottomColor: '#2A2E33',
+          }}
+        >
           <SettingsRow title={row} disabled={disabled} />
         </View>
       ))}
@@ -101,10 +107,14 @@ function SettingsSection({
 }
 
 export function SettingsScreen() {
+  const { signOut } = useAuth();
+
   return (
     <Screen>
       <View style={{ marginBottom: 24 }}>
-        <Label style={{ color: '#D97706', letterSpacing: 2 }}>FABRICATOR</Label>
+        <Label style={{ color: '#D97706', letterSpacing: 2 }}>
+          FABRICATOR
+        </Label>
 
         <Title style={{ fontSize: 32, marginTop: 8 }}>
           Workshop Settings
@@ -129,10 +139,14 @@ export function SettingsScreen() {
           marginBottom: 18,
         }}
       >
-        <Label style={{ color: '#D97706', marginBottom: 12 }}>PLATFORM STATUS</Label>
+        <Label style={{ color: '#D97706', marginBottom: 12 }}>
+          PLATFORM STATUS
+        </Label>
 
         <AppText style={{ color: '#E5E7EB', lineHeight: 22 }}>
-          Fabricator supports project documentation, activity tracking, milestone management, creator workflows, and organized build history across fabrication and restoration projects.
+          Fabricator supports project documentation, activity tracking,
+          milestone management, creator workflows, and organized build
+          history across fabrication and restoration projects.
         </AppText>
       </Card>
 
@@ -153,15 +167,47 @@ export function SettingsScreen() {
           borderWidth: 1,
           borderRadius: 18,
           padding: 18,
-          marginBottom: 40,
+          marginBottom: 18,
         }}
       >
-        <Label style={{ color: '#D97706', marginBottom: 12 }}>BUILD HISTORY</Label>
+        <Label style={{ color: '#D97706', marginBottom: 12 }}>
+          BUILD HISTORY
+        </Label>
 
         <AppText style={{ color: '#C9CDD2', lineHeight: 22 }}>
-          Activity tracking focuses on long-term project documentation, milestone progression, fabrication workflows, and creator-oriented build management.
+          Activity tracking focuses on long-term project documentation,
+          milestone progression, fabrication workflows, and creator-oriented
+          build management.
         </AppText>
       </Card>
+
+      <Pressable
+        onPress={async () => {
+          await signOut();
+        }}
+        style={{
+          backgroundColor: '#2A1612',
+          borderColor: '#D97706',
+          borderWidth: 1,
+          borderRadius: 18,
+          paddingVertical: 18,
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: 120,
+          marginTop: 10,
+        }}
+      >
+        <AppText
+          style={{
+            color: '#F59E0B',
+            fontSize: 16,
+            fontWeight: '700',
+            letterSpacing: 1,
+          }}
+        >
+          LOG OUT
+        </AppText>
+      </Pressable>
     </Screen>
   );
 }
