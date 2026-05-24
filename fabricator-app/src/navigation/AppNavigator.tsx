@@ -54,6 +54,7 @@ function MainTabs() {
       screenOptions={({ route, navigation }) => ({
         headerStyle: { backgroundColor: colors.black },
         headerTintColor: colors.white,
+        headerTitleAlign: 'left',
         headerTitle: () => <HeaderBrand />,
         headerShadowVisible: false,
         sceneStyle: { backgroundColor: colors.black },
@@ -95,7 +96,13 @@ function MainTabs() {
         )
       })}
     >
-      <Tabs.Screen name="Dashboard" component={DashboardScreen} />
+      <Tabs.Screen
+  name="Dashboard"
+  component={DashboardScreen}
+  options={{
+    title: '',
+  }}
+/>
       <Tabs.Screen name="Tasks" component={TasksScreen} />
       <Tabs.Screen name="Parts" component={PartsScreen} />
       <Tabs.Screen name="Session" component={SessionScreen} options={{ title: 'Sessions' }} />
@@ -114,7 +121,6 @@ export function AppNavigator() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.black },
         headerTintColor: colors.white,
-        headerTitle: () => <HeaderBrand />,
         headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.black }
       }}
@@ -123,8 +129,8 @@ export function AppNavigator() {
       <Stack.Screen
         name="Main"
         component={MainTabs}
-        options={{ title: 'Fabricator OS', headerBackVisible: false, gestureEnabled: false }}
-      />
+        options={{ headerShown: false }}
+    />    
       <Stack.Screen
         name="ProjectEdit"
         component={ProjectEditScreen}
