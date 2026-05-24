@@ -1,4 +1,4 @@
-import { Pressable, View } from 'react-native';
+import { Image, Pressable, View } from 'react-native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -28,13 +28,15 @@ const tabIcons: Record<string, keyof typeof MaterialCommunityIcons.glyphMap> = {
   Settings: 'cog'
 };
 
+const HeaderLogo=()=> <Image source={require('../../assets/fabricator-logo.png')} style={{width:34,height:34,resizeMode:'contain'}} />;
+
 function MainTabs() {
   return (
     <Tabs.Navigator
       screenOptions={({ route, navigation }) => ({
         headerStyle: { backgroundColor: colors.black },
         headerTintColor: colors.white,
-        headerTitleStyle: { fontWeight: '900' },
+        headerTitle: () => <HeaderLogo />,
         headerShadowVisible: false,
         sceneStyle: { backgroundColor: colors.black },
         headerLeft: () => route.name === 'Dashboard' ? null : (
@@ -94,7 +96,7 @@ export function AppNavigator() {
       screenOptions={{
         headerStyle: { backgroundColor: colors.black },
         headerTintColor: colors.white,
-        headerTitleStyle: { fontWeight: '900' },
+        headerTitle: () => <HeaderLogo />,
         headerShadowVisible: false,
         contentStyle: { backgroundColor: colors.black }
       }}
