@@ -26,8 +26,8 @@ addProject:(input:ProjectInput)=>void;
 updateProject:(id:string,input:Partial<ProjectInput & {progress:number}>)=>void;
 addSession:(notes:string)=>void;
 addVoiceNote:(transcript:string)=>void;
-addTask:(title:string,system:string)=>void;
-addPart:(name:string,system:string,vendor?:string)=>void;
+addTask:(title:string,system:string,createPart?:boolean)=>void;
+addPart:(name:string,system:string,vendor?:string,partNumber?:string,description?:string)=>void;
 addPhoto:(caption:string,tag:string,uri?:string)=>void;
 cycleTask:(id:string)=>void;
 cyclePart:(id:string)=>void;
@@ -102,8 +102,14 @@ addProject:(input)=>set(s=>{const id=nextId('p');persistSoon(get);return {select
 updateProject:(id,input)=>set(s=>{persistSoon(get);return {projects:s.projects.map(p=>p.id===id?{...p,...input,updatedAt:today()}:p)}}),
 addSession:(notes)=>set(s=>{persistSoon(get);return {sessions:[{id:nextId('s'),projectId:s.selectedProjectId,title:'Garage session',notes,durationMinutes:60,createdAt:today()},...s.sessions]}}),
 addVoiceNote:(transcript)=>set(s=>{persistSoon(get);return {voiceNotes:[{id:nextId('v'),projectId:s.selectedProjectId,transcript,createdAt:today()},...s.voiceNotes]}}),
-addTask:(title,system)=>set(s=>{persistSoon(get);return {tasks:[{id:nextId('t'),projectId:s.selectedProjectId,title,system,status:'To Do'},...s.tasks]}}),
-addPart:(name,system,vendor)=>set(s=>{persistSoon(get);return {parts:[{id:nextId('pa'),projectId:s.selectedProjectId,name,system,status:'Need to Order',vendor},...s.parts]}}),
+addTask:(title,system,createPart)=>set(s=>{
+persistSoon(get);
+const newTask={id:nextId('t'),projectId:s.selectedProjectId,title,system,status:'To Do' as const};
+const shouldCreatePart=createPart||['Parts','Wiring'].includes(system);
+const newParts=shouldCreatePart?[{id:nextId('pa'),projectId:s.selectedProjectId,name:title,system,status:'Need to Order' as const}]:[];
+return {tasks:[newTask,...s.tasks],parts:[...newParts,...s.parts]}
+}),
+addPart:(name,system,vendor,partNumber,description)=>set(s=>{persistSoon(get);return {parts:[{id:nextId('pa'),projectId:s.selectedProjectId,name,system,status:'Need to Order',vendor,partNumber,description},...s.parts]}}),
 addPhoto:(caption,tag,uri)=>set(s=>{persistSoon(get);return {photos:[{id:nextId('ph'),projectId:s.selectedProjectId,caption,tag,uri:uri||'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=900',createdAt:today()},...s.photos]}}),
 cycleTask:(id)=>set(s=>{persistSoon(get);return {tasks:s.tasks.map(t=>t.id===id?{...t,status:t.status==='To Do'?'In Progress':t.status==='In Progress'?'Done':'To Do'}:t)}}),
 cyclePart:(id)=>set(s=>{persistSoon(get);return {parts:s.parts.map(p=>p.id===id?{...p,status:p.status==='Need to Order'?'On Hand':p.status==='On Hand'?'Installed':'Need to Order'}:p)}}),
