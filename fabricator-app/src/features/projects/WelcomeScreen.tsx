@@ -43,8 +43,21 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
     });
   }, [projects, search]);
 
-  const activeProjects = projects.filter(project => project.status === 'Active').length;
-  const completedProjects = projects.filter(project => project.status === 'Complete').length;
+  const activeProjectList = filteredProjects.filter(
+    project => project.status !== 'Completed'
+  );
+
+  const completedProjectList = filteredProjects.filter(
+    project => project.status === 'Completed'
+  );
+
+  const activeProjects = projects.filter(
+    project => project.status === 'Active'
+  ).length;
+
+  const completedProjects = projects.filter(
+    project => project.status === 'Completed'
+  ).length;
 
   const createProject = () => {
     if (!projectName.trim()) return;
@@ -62,9 +75,17 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
     setShowCreate(false);
   };
 
+  const openProject = (projectId: string) => {
+    selectProject(projectId);
+    navigation.navigate('Main');
+  };
+
   return (
     <Screen>
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 120 }}
+      >
         <View style={styles.heroLayout}>
           <View style={{ flex: 1 }}>
             <Image
@@ -79,11 +100,16 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
             </Title>
 
             <AppText style={styles.heroCopy}>
-              Create projects to track fabrication notes, photos, materials, unfinished work, and build progress across the shop.
+              Create projects to track fabrication notes, photos,
+              materials, unfinished work, and build progress across the
+              shop.
             </AppText>
           </View>
 
-          <Pressable style={styles.newProjectTile} onPress={() => setShowCreate(!showCreate)}>
+          <Pressable
+            style={styles.newProjectTile}
+            onPress={() => setShowCreate(!showCreate)}
+          >
             <MaterialCommunityIcons
               name={showCreate ? 'close' : 'plus'}
               size={42}
@@ -98,29 +124,55 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
 
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
-            <MaterialCommunityIcons name="folder-outline" size={24} color={colors.orange} />
+            <MaterialCommunityIcons
+              name="folder-outline"
+              size={24}
+              color={colors.orange}
+            />
+
             <Title style={styles.statValue}>{projects.length}</Title>
+
             <AppText style={styles.statLabel}>Projects</AppText>
             <AppText style={styles.statSub}>Total</AppText>
           </View>
 
           <View style={styles.statCard}>
-            <MaterialCommunityIcons name="progress-clock" size={24} color={colors.orange} />
+            <MaterialCommunityIcons
+              name="progress-clock"
+              size={24}
+              color={colors.orange}
+            />
+
             <Title style={styles.statValue}>{activeProjects}</Title>
+
             <AppText style={styles.statLabel}>Active</AppText>
             <AppText style={styles.statSub}>In Progress</AppText>
           </View>
 
-          <View style={styles.statCard}>
-            <MaterialCommunityIcons name="check-circle-outline" size={24} color={colors.orange} />
-            <Title style={styles.statValue}>{completedProjects}</Title>
+          <View style={styles.statCardCompleted}>
+            <MaterialCommunityIcons
+              name="check-circle-outline"
+              size={24}
+              color="#7DFFB2"
+            />
+
+            <Title style={styles.completedStatValue}>
+              {completedProjects}
+            </Title>
+
             <AppText style={styles.statLabel}>Completed</AppText>
-            <AppText style={styles.statSub}>Finished</AppText>
+            <AppText style={styles.statSub}>Finished Builds</AppText>
           </View>
 
           <View style={styles.statCard}>
-            <MaterialCommunityIcons name="camera-outline" size={24} color={colors.orange} />
+            <MaterialCommunityIcons
+              name="camera-outline"
+              size={24}
+              color={colors.orange}
+            />
+
             <Title style={styles.statValue}>{photos.length}</Title>
+
             <AppText style={styles.statLabel}>Photos</AppText>
             <AppText style={styles.statSub}>Across Projects</AppText>
           </View>
@@ -128,7 +180,11 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
 
         <View style={styles.searchRow}>
           <View style={styles.searchBox}>
-            <MaterialCommunityIcons name="magnify" size={22} color={colors.steel} />
+            <MaterialCommunityIcons
+              name="magnify"
+              size={22}
+              color={colors.steel}
+            />
 
             <TextInput
               placeholder="Search projects..."
@@ -140,7 +196,12 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
           </View>
 
           <Pressable style={styles.filterButton}>
-            <MaterialCommunityIcons name="tune-variant" size={22} color={colors.white} />
+            <MaterialCommunityIcons
+              name="tune-variant"
+              size={22}
+              color={colors.white}
+            />
+
             <AppText style={styles.filterText}>Filter</AppText>
           </Pressable>
         </View>
@@ -173,35 +234,43 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
               style={styles.input}
             />
 
-            <Pressable style={styles.saveButton} onPress={createProject}>
-              <AppText style={styles.saveButtonText}>Save Project</AppText>
+            <Pressable
+              style={styles.saveButton}
+              onPress={createProject}
+            >
+              <AppText style={styles.saveButtonText}>
+                Save Project
+              </AppText>
             </Pressable>
           </Card>
         ) : null}
 
         <View style={styles.sectionHeader}>
-          <Label>RECENT PROJECTS</Label>
+          <Label>ACTIVE PROJECTS</Label>
 
-          <AppText style={styles.viewAllText}>View all</AppText>
+          <AppText style={styles.viewAllText}>
+            {activeProjectList.length} builds
+          </AppText>
         </View>
 
-        {filteredProjects.map((project, index) => (
+        {activeProjectList.map((project, index) => (
           <Pressable
             key={project.id}
-            onPress={() => {
-              selectProject(project.id);
-              navigation.navigate('Main');
-            }}
+            onPress={() => openProject(project.id)}
           >
             <View style={styles.projectRow}>
               <Image
-                source={{ uri: projectImages[index % projectImages.length] }}
+                source={{
+                  uri: projectImages[index % projectImages.length],
+                }}
                 style={styles.projectImage}
               />
 
               <View style={{ flex: 1 }}>
                 <View style={styles.projectHeader}>
-                  <Title style={styles.projectTitle}>{project.name}</Title>
+                  <Title style={styles.projectTitle}>
+                    {project.name}
+                  </Title>
 
                   <MaterialCommunityIcons
                     name="dots-vertical"
@@ -215,10 +284,14 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
                   <StatusPill label={project.status} />
                 </View>
 
-                <AppText style={styles.updateText}>Updated recently</AppText>
+                <AppText style={styles.updateText}>
+                  Updated recently
+                </AppText>
 
                 <View style={styles.progressRow}>
-                  <AppText style={styles.progressLabel}>{project.progress}%</AppText>
+                  <AppText style={styles.progressLabel}>
+                    {project.progress}%
+                  </AppText>
 
                   <View style={styles.progressTrack}>
                     <View
@@ -233,6 +306,66 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
             </View>
           </Pressable>
         ))}
+
+        {completedProjectList.length ? (
+          <>
+            <View style={[styles.sectionHeader, { marginTop: 20 }]}>
+              <Label>COMPLETED BUILDS</Label>
+
+              <AppText style={styles.completedLabel}>
+                Archived Showcase
+              </AppText>
+            </View>
+
+            {completedProjectList.map((project, index) => (
+              <Pressable
+                key={project.id}
+                onPress={() => openProject(project.id)}
+              >
+                <View style={styles.completedProjectRow}>
+                  <Image
+                    source={{
+                      uri: projectImages[index % projectImages.length],
+                    }}
+                    style={styles.completedProjectImage}
+                  />
+
+                  <View style={{ flex: 1 }}>
+                    <View style={styles.projectHeader}>
+                      <Title style={styles.completedProjectTitle}>
+                        {project.name}
+                      </Title>
+
+                      <MaterialCommunityIcons
+                        name="trophy-outline"
+                        size={22}
+                        color="#7DFFB2"
+                      />
+                    </View>
+
+                    <View style={styles.pillRow}>
+                      <StatusPill label="Completed" />
+                      <StatusPill label={project.category} />
+                    </View>
+
+                    <AppText style={styles.completedText}>
+                      Build completed and archived.
+                    </AppText>
+
+                    {project.completedAt ? (
+                      <AppText style={styles.completedDate}>
+                        Finished{' '}
+                        {new Date(
+                          project.completedAt
+                        ).toLocaleDateString()}
+                      </AppText>
+                    ) : null}
+                  </View>
+                </View>
+              </Pressable>
+            ))}
+          </>
+        ) : null}
       </ScrollView>
     </Screen>
   );
@@ -301,9 +434,25 @@ const styles = StyleSheet.create({
     minHeight: 128,
   },
 
+  statCardCompleted: {
+    flex: 1,
+    backgroundColor: '#14211A',
+    borderWidth: 1,
+    borderColor: '#2E7D4F',
+    borderRadius: 22,
+    padding: 16,
+    minHeight: 128,
+  },
+
   statValue: {
     fontSize: 34,
     marginTop: 10,
+  },
+
+  completedStatValue: {
+    fontSize: 34,
+    marginTop: 10,
+    color: '#7DFFB2',
   },
 
   statLabel: {
@@ -371,6 +520,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
+  completedLabel: {
+    color: '#7DFFB2',
+    fontWeight: '800',
+  },
+
   projectRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -383,11 +537,30 @@ const styles = StyleSheet.create({
     marginBottom: 14,
   },
 
+  completedProjectRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#14211A',
+    borderWidth: 1,
+    borderColor: '#2E7D4F',
+    borderRadius: 24,
+    padding: 14,
+    gap: 16,
+    marginBottom: 14,
+  },
+
   projectImage: {
     width: 110,
     height: 110,
     borderRadius: 18,
     backgroundColor: colors.graphite,
+  },
+
+  completedProjectImage: {
+    width: 110,
+    height: 110,
+    borderRadius: 18,
+    opacity: 0.82,
   },
 
   projectHeader: {
@@ -402,6 +575,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
+  completedProjectTitle: {
+    fontSize: 30,
+    lineHeight: 34,
+    flex: 1,
+    color: '#D7FFE7',
+  },
+
   pillRow: {
     flexDirection: 'row',
     gap: 8,
@@ -411,6 +591,17 @@ const styles = StyleSheet.create({
   updateText: {
     color: colors.steel,
     marginTop: 10,
+  },
+
+  completedText: {
+    color: '#A7D9BA',
+    marginTop: 10,
+  },
+
+  completedDate: {
+    color: '#7DFFB2',
+    marginTop: 8,
+    fontWeight: '700',
   },
 
   progressRow: {
