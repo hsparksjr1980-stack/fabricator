@@ -5,34 +5,45 @@ import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { AppText, Label, Title } from '@/components/Text';
-import { buildVendorSearchLinks } from '@/services/parts/partsLookupService';
 import { useFabricatorStore } from '@/state/useFabricatorStore';
 import { colors, radius, spacing } from '@/theme/theme';
 
 const systems=['Chassis','Engine','Electrical','Body','Interior','Shop Supplies'];
 
-function PartRow({name,system,status,vendor,onPress,onSearch}:{name:string;system:string;status:string;vendor?:string;onPress:()=>void;onSearch?:()=>void}){
-const done=status==='Installed';
-const staged=status==='On Hand';
-const needs=status==='Need to Order';
-return <Pressable onPress={onPress} style={({pressed})=>[styles.partRow,needs&&styles.needRow,done&&styles.doneRow,pressed&&styles.pressed]}>
-<View style={[styles.checkbox,done&&styles.checkboxDone,staged&&styles.checkboxStaged]}>{done?<MaterialCommunityIcons name="check-bold" size={20} color={colors.white}/>:staged?<MaterialCommunityIcons name="package-check" size={18} color={colors.orange}/>:null}</View>
+function buildSearchQuery(part:any){
+return [part.name,part.partNumber,part.vendor].filter(Boolean).join(' ')
+}
+
+function PartRow({part,onPress}:{part:any;onPress:()=>void}){
+const search=()=>{
+const query=buildSearchQuery(part);
+Linking.openURL(`https://www.google.com/search?q=${encodeURIComponent(query)}`)
+};
+
+return <Pressable onPress={onPress} style={({pressed})=>[styles.partRow,pressed&&styles.pressed]}>
 <View style={{flex:1}}>
-<AppText style={[styles.partTitle,done&&styles.doneText]}>{name}</AppText>
-<View style={styles.metaRow}><Label>{system}</Label><AppText style={styles.statusText}>{status}</AppText></View>
-{vendor?<AppText style={styles.vendorNote}>Vendor: {vendor}</AppText>:null}
-{needs?<AppText style={styles.needText}>Needed before the next shop session.</AppText>:null}
+<AppText style={styles.partTitle}>{part.name}</AppText>
+{part.partNumber?<AppText style={styles.partNumber}>{part.partNumber}</AppText>:null}
+{part.vendor?<AppText style={styles.vendorText}>{part.vendor}</AppText>:null}
+{part.description?<AppText style={styles.description}>{part.description}</AppText>:null}
+<View style={styles.metaRow}><Label>{part.system}</Label><AppText style={styles.status}>{part.status}</AppText></View>
 </View>
-{needs&&onSearch?<Pressable onPress={onSearch} style={styles.searchButton}><MaterialCommunityIcons name="magnify" size={19} color={colors.orange}/></Pressable>:null}
+<Pressable style={styles.searchButton} onPress={search}>
+<MaterialCommunityIcons name="magnify" size={20} color={colors.orange}/>
+</Pressable>
 </Pressable>
 }
 
 export function PartsScreen(){
 const store=useFabricatorStore();
 const [name,setName]=useState('');
-const [system,setSystem]=useState('Chassis');
+const [partNumber,setPartNumber]=useState('');
 const [vendor,setVendor]=useState('');
+const [description,setDescription]=useState('');
+const [system,setSystem]=useState('Chassis');
+
 const parts=store.parts.filter(p=>p.projectId===store.selectedProjectId);
+
 const grouped=useMemo(()=>({
 'To Buy':parts.filter(p=>p.status==='Need to Order'),
 'On Shelf':parts.filter(p=>p.status==='On Hand'||p.status==='Ordered'),
@@ -41,73 +52,57 @@ Installed:parts.filter(p=>p.status==='Installed')
 
 const save=()=>{
 if(!name.trim())return;
-store.addPart(name.trim(),system.trim()||'General',vendor.trim());
+store.addPart(name.trim(),system,vendor.trim(),partNumber.trim(),description.trim());
 setName('');
-setSystem('Chassis');
+setPartNumber('');
 setVendor('');
+setDescription('');
 };
 
 return <Screen>
-<View style={styles.heroPanel}>
-<Label>PARTS LIST</Label>
-<Title style={styles.heroTitle}>To Buy / On Shelf / Installed</Title>
-<AppText style={styles.heroCopy}>A simple parts checklist for what needs ordering, what is staged in the shop, and what is already on the build.</AppText>
-<View style={styles.statsRow}>
-<View style={styles.statBox}><Label>Buy</Label><Title style={styles.statValue}>{grouped['To Buy'].length}</Title></View>
-<View style={styles.statBox}><Label>Shelf</Label><Title style={styles.statValue}>{grouped['On Shelf'].length}</Title></View>
-<View style={styles.statBox}><Label>Done</Label><Title style={styles.statValue}>{grouped.Installed.length}</Title></View>
-</View>
+<View style={styles.hero}>
+<Label>PARTS WORKFLOW</Label>
+<Title style={styles.heroTitle}>Shop Parts + Materials</Title>
+<AppText style={styles.heroCopy}>Quick capture for fabrication parts, hardware, materials, and supplies.</AppText>
 </View>
 
 <Card style={styles.createCard}>
-<View style={styles.cardTop}><View><Label>QUICK ADD</Label><Title style={styles.cardTitle}>Add to parts list</Title></View><MaterialCommunityIcons name="clipboard-plus-outline" size={30} color={colors.orange}/></View>
-<TextInput value={name} onChangeText={setName} placeholder="Part, material, supply, or hardware" placeholderTextColor={colors.steel} style={styles.input}/>
+<View style={styles.headerRow}><View><Label>QUICK CAPTURE</Label><Title style={styles.cardTitle}>Type or dictate</Title></View><MaterialCommunityIcons name="microphone-message" size={30} color={colors.orange}/></View>
+<TextInput value={name} onChangeText={setName} placeholder="Part name" placeholderTextColor={colors.steel} style={styles.input}/>
+<TextInput value={partNumber} onChangeText={setPartNumber} placeholder="Part number" placeholderTextColor={colors.steel} style={styles.input}/>
+<TextInput value={vendor} onChangeText={setVendor} placeholder="Vendor" placeholderTextColor={colors.steel} style={styles.input}/>
+<TextInput value={description} onChangeText={setDescription} placeholder="Description or notes" placeholderTextColor={colors.steel} multiline style={[styles.input,{minHeight:90}]}/>
 <View style={styles.chips}>{systems.map(item=><Pressable key={item} onPress={()=>setSystem(item)} style={[styles.chip,system===item&&styles.chipActive]}><AppText style={[styles.chipText,system===item&&styles.chipTextActive]}>{item}</AppText></Pressable>)}</View>
-<TextInput value={vendor} onChangeText={setVendor} placeholder="Vendor note optional" placeholderTextColor={colors.steel} style={styles.input}/>
-<Button title="Add to parts list" onPress={save}/>
+<Button title="Save Part" onPress={save}/>
 </Card>
 
-{Object.entries(grouped).map(([section,list])=><View key={section} style={styles.section}>
-<View style={styles.sectionHeader}><Label>{section}</Label><AppText>{list.length} items</AppText></View>
-{list.length?list.map(p=>{
-const firstSearch=buildVendorSearchLinks(p.name)[0];
-return <PartRow key={p.id} name={p.name} system={p.system} status={p.status} vendor={p.vendor} onPress={()=>store.cyclePart(p.id)} onSearch={firstSearch?()=>Linking.openURL(firstSearch.url):undefined}/>
-}):<Card><AppText>No items here yet.</AppText></Card>}
-</View>)}
-<View style={{height:40}} />
+{Object.entries(grouped).map(([section,list])=><View key={section} style={styles.section}><View style={styles.sectionHeader}><Label>{section}</Label><AppText>{list.length} items</AppText></View>{list.length?list.map(p=><PartRow key={p.id} part={p} onPress={()=>store.cyclePart(p.id)} />):<Card><AppText>No items here yet.</AppText></Card>}</View>)}
+<View style={{height:60}} />
 </Screen>
 }
 
 const styles=StyleSheet.create({
-heroPanel:{backgroundColor:colors.panelHigh,borderColor:colors.line,borderWidth:1,borderRadius:radius.xl,padding:spacing.lg,marginBottom:18},
-heroTitle:{fontSize:34,lineHeight:39},
-heroCopy:{color:colors.white,marginTop:10,lineHeight:22},
-statsRow:{flexDirection:'row',gap:10,marginTop:18},
-statBox:{flex:1,backgroundColor:colors.charcoal,borderColor:colors.line,borderWidth:1,borderRadius:radius.md,padding:12},
-statValue:{fontSize:24,lineHeight:29},
+hero:{backgroundColor:colors.panelHigh,borderColor:colors.line,borderWidth:1,borderRadius:radius.xl,padding:spacing.lg,marginBottom:18},
+heroTitle:{fontSize:34,lineHeight:38},
+heroCopy:{marginTop:10,lineHeight:22,color:colors.white},
 createCard:{borderColor:'rgba(217,106,29,0.35)'},
-cardTop:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',gap:12,marginBottom:12},
-cardTitle:{fontSize:22,lineHeight:27},
-input:{color:colors.white,backgroundColor:colors.graphite,borderColor:colors.line,borderWidth:1,borderRadius:radius.md,padding:spacing.md,marginVertical:spacing.sm},
-chips:{flexDirection:'row',flexWrap:'wrap',gap:8,marginVertical:10},
+headerRow:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:12},
+cardTitle:{fontSize:22,lineHeight:28},
+input:{color:colors.white,backgroundColor:colors.graphite,borderColor:colors.line,borderWidth:1,borderRadius:radius.md,padding:spacing.md,marginBottom:12},
+chips:{flexDirection:'row',flexWrap:'wrap',gap:8,marginBottom:14},
 chip:{backgroundColor:colors.charcoal,borderColor:colors.line,borderWidth:1,borderRadius:999,paddingVertical:9,paddingHorizontal:12},
 chipActive:{backgroundColor:colors.orangeSoft,borderColor:colors.orange},
 chipText:{fontSize:12,color:colors.muted,fontWeight:'800'},
 chipTextActive:{color:colors.white},
 section:{marginBottom:18},
 sectionHeader:{flexDirection:'row',justifyContent:'space-between',alignItems:'center',marginBottom:10},
-partRow:{backgroundColor:colors.panel,borderColor:colors.line,borderWidth:1,borderRadius:radius.lg,padding:16,marginBottom:10,flexDirection:'row',gap:14,alignItems:'center'},
-needRow:{borderColor:'rgba(217,106,29,0.45)',backgroundColor:colors.panelHigh},
-doneRow:{opacity:0.62},
-pressed:{opacity:0.78,transform:[{scale:0.99}]},
-checkbox:{width:34,height:34,borderRadius:10,borderWidth:2,borderColor:colors.orange,alignItems:'center',justifyContent:'center',backgroundColor:colors.charcoal},
-checkboxDone:{backgroundColor:colors.orange},
-checkboxStaged:{backgroundColor:colors.orangeSoft},
-partTitle:{fontSize:17,lineHeight:23,color:colors.white,fontWeight:'900'},
-doneText:{textDecorationLine:'line-through',color:colors.steel},
-metaRow:{flexDirection:'row',justifyContent:'space-between',gap:10,marginTop:8},
-statusText:{fontSize:12,color:colors.steel,fontWeight:'800'},
-vendorNote:{marginTop:8,color:colors.white},
-needText:{marginTop:8,color:colors.orange,fontSize:12,fontWeight:'800'},
-searchButton:{width:40,height:40,borderRadius:12,backgroundColor:colors.orangeSoft,borderWidth:1,borderColor:'rgba(217,106,29,0.35)',alignItems:'center',justifyContent:'center'}
+partRow:{backgroundColor:colors.panel,borderColor:colors.line,borderWidth:1,borderRadius:radius.lg,padding:16,marginBottom:10,flexDirection:'row',gap:12,alignItems:'center'},
+partTitle:{fontSize:18,color:colors.white,fontWeight:'900'},
+partNumber:{marginTop:4,color:colors.orange,fontWeight:'800'},
+vendorText:{marginTop:6,color:colors.white},
+description:{marginTop:8,color:colors.steel,lineHeight:20},
+metaRow:{flexDirection:'row',justifyContent:'space-between',marginTop:10},
+status:{fontSize:12,color:colors.steel,fontWeight:'800'},
+searchButton:{width:44,height:44,borderRadius:12,backgroundColor:colors.orangeSoft,alignItems:'center',justifyContent:'center'},
+pressed:{opacity:0.8,transform:[{scale:0.99}]}
 });
