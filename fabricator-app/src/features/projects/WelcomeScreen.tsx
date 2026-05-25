@@ -32,6 +32,7 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
   const [projectName, setProjectName] = useState('');
   const [category, setCategory] = useState('Metal Fabrication');
   const [phase, setPhase] = useState('Planning');
+  const [budgetTarget, setBudgetTarget] = useState('');
 
   const filteredProjects = useMemo(() => {
     if (!search.trim()) return projects;
@@ -67,11 +68,13 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
       category: category as any,
       phase: phase as any,
       status: 'Active',
-    });
+      budgetTarget: budgetTarget ? Number(budgetTarget) : 0,
+    } as any);
 
     setProjectName('');
     setCategory('Metal Fabrication');
     setPhase('Planning');
+    setBudgetTarget('');
     setShowCreate(false);
   };
 
@@ -89,9 +92,10 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
         <View style={styles.heroLayout}>
           <View style={{ flex: 1 }}>
             <Image
-  source={require('../../../assets/fabricator-logo.png')}
-  style={styles.logo}
-/>
+              source={require('../../../assets/fabricator-logo.png')}
+              style={styles.logo}
+            />
+
             <Label>WORKSHOP PROJECTS</Label>
 
             <Title style={styles.heroTitle}>
@@ -122,59 +126,6 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
         </View>
 
         <View style={styles.statsRow}>
-          <View style={styles.statCard}>
-            <MaterialCommunityIcons
-              name="folder-outline"
-              size={24}
-              color={colors.orange}
-            />
-
-            <Title style={styles.statValue}>{projects.length}</Title>
-
-            <AppText style={styles.statLabel}>Projects</AppText>
-            <AppText style={styles.statSub}>Total</AppText>
-          </View>
-
-          <View style={styles.statCard}>
-            <MaterialCommunityIcons
-              name="progress-clock"
-              size={24}
-              color={colors.orange}
-            />
-
-            <Title style={styles.statValue}>{activeProjects}</Title>
-
-            <AppText style={styles.statLabel}>Active</AppText>
-            <AppText style={styles.statSub}>In Progress</AppText>
-          </View>
-
-          <View style={styles.statCardCompleted}>
-            <MaterialCommunityIcons
-              name="check-circle-outline"
-              size={24}
-              color="#7DFFB2"
-            />
-
-            <Title style={styles.completedStatValue}>
-              {completedProjects}
-            </Title>
-
-            <AppText style={styles.statLabel}>Completed</AppText>
-            <AppText style={styles.statSub}>Finished Builds</AppText>
-          </View>
-
-          <View style={styles.statCard}>
-            <MaterialCommunityIcons
-              name="camera-outline"
-              size={24}
-              color={colors.orange}
-            />
-
-            <Title style={styles.statValue}>{photos.length}</Title>
-
-            <AppText style={styles.statLabel}>Photos</AppText>
-            <AppText style={styles.statSub}>Across Projects</AppText>
-          </View>
         </View>
 
         <View style={styles.searchRow}>
@@ -193,16 +144,6 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
               style={styles.searchInput}
             />
           </View>
-
-          <Pressable style={styles.filterButton}>
-            <MaterialCommunityIcons
-              name="tune-variant"
-              size={22}
-              color={colors.white}
-            />
-
-            <AppText style={styles.filterText}>Filter</AppText>
-          </Pressable>
         </View>
 
         {showCreate ? (
@@ -233,6 +174,15 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
               style={styles.input}
             />
 
+            <TextInput
+              placeholder="Budget Target"
+              placeholderTextColor={colors.steel}
+              value={budgetTarget}
+              onChangeText={setBudgetTarget}
+              keyboardType="numeric"
+              style={styles.input}
+            />
+
             <Pressable
               style={styles.saveButton}
               onPress={createProject}
@@ -242,136 +192,6 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
               </AppText>
             </Pressable>
           </Card>
-        ) : null}
-
-        <View style={styles.sectionHeader}>
-          <Label>ACTIVE PROJECTS</Label>
-
-          <AppText style={styles.viewAllText}>
-            {activeProjectList.length} builds
-          </AppText>
-        </View>
-
-        {activeProjectList.map((project, index) => (
-          <Pressable
-  key={project.id}
-  onPress={() => openProject(project.id)}
->
-  <View style={styles.projectRow}>
-    <Image
-      source={{
-        uri:
-          photos.find(
-            photo => photo.id === project.coverPhotoId
-          )?.uri ||
-          projectImages[index % projectImages.length],
-      }}
-      style={styles.projectImage}
-    />
-
-    <View style={{ flex: 1 }}>
-      <View style={styles.projectHeader}>
-        <Title style={styles.projectTitle}>
-          {project.name}
-        </Title>
-
-        <MaterialCommunityIcons
-          name="dots-vertical"
-          size={20}
-          color={colors.steel}
-        />
-      </View>
-
-      <View style={styles.pillRow}>
-        <StatusPill label={project.phase} />
-        <StatusPill label={project.status} />
-      </View>
-
-      <AppText style={styles.updateText}>
-        Updated recently
-      </AppText>
-
-      <View style={styles.progressRow}>
-        <AppText style={styles.progressLabel}>
-          {project.progress}%
-        </AppText>
-
-        <View style={styles.progressTrack}>
-          <View
-            style={[
-              styles.progressFill,
-              { width: `${project.progress}%` },
-            ]}
-          />
-        </View>
-      </View>
-    </View>
-  </View>
-</Pressable>
-        ))}
-
-        {completedProjectList.length ? (
-          <>
-            <View style={[styles.sectionHeader, { marginTop: 20 }]}>
-              <Label>COMPLETED BUILDS</Label>
-
-              <AppText style={styles.completedLabel}>
-                Archived Showcase
-              </AppText>
-            </View>
-
-            {completedProjectList.map((project, index) => (
-              <Pressable
-              key={project.id}
-                    onPress={() => openProject(project.id)}
->
-              <View style={styles.completedProjectRow}>
-              <Image
-                  source={{
-                    uri:
-                      photos.find(
-                        photo => photo.id === project.coverPhotoId
-                      )?.uri ||
-                      projectImages[index % projectImages.length],
-                  }}
-                  style={styles.completedProjectImage}
-                />
-
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.projectHeader}>
-                      <Title style={styles.completedProjectTitle}>
-                        {project.name}
-                      </Title>
-
-                      <MaterialCommunityIcons
-                        name="trophy-outline"
-                        size={22}
-                        color="#7DFFB2"
-                      />
-                    </View>
-
-                    <View style={styles.pillRow}>
-                      <StatusPill label="Completed" />
-                      <StatusPill label={project.category} />
-                    </View>
-
-                    <AppText style={styles.completedText}>
-                      Build completed and archived.
-                    </AppText>
-
-                    {project.completedAt ? (
-                      <AppText style={styles.completedDate}>
-                        Finished{' '}
-                        {new Date(
-                          project.completedAt
-                        ).toLocaleDateString()}
-                      </AppText>
-                    ) : null}
-                  </View>
-                </View>
-              </Pressable>
-            ))}
-          </>
         ) : null}
       </ScrollView>
     </Screen>
@@ -431,48 +251,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
-  statCard: {
-    flex: 1,
-    backgroundColor: colors.panel,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 22,
-    padding: 16,
-    minHeight: 128,
-  },
-
-  statCardCompleted: {
-    flex: 1,
-    backgroundColor: '#14211A',
-    borderWidth: 1,
-    borderColor: '#2E7D4F',
-    borderRadius: 22,
-    padding: 16,
-    minHeight: 128,
-  },
-
-  statValue: {
-    fontSize: 34,
-    marginTop: 10,
-  },
-
-  completedStatValue: {
-    fontSize: 34,
-    marginTop: 10,
-    color: '#7DFFB2',
-  },
-
-  statLabel: {
-    color: colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-  },
-
-  statSub: {
-    color: colors.steel,
-    marginTop: 4,
-  },
-
   searchRow: {
     flexDirection: 'row',
     gap: 12,
@@ -496,145 +274,6 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.white,
     fontSize: 17,
-  },
-
-  filterButton: {
-    width: 120,
-    backgroundColor: colors.panel,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexDirection: 'row',
-    gap: 8,
-  },
-
-  filterText: {
-    color: colors.white,
-    fontWeight: '800',
-  },
-
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-
-  viewAllText: {
-    color: colors.orange,
-    fontWeight: '800',
-  },
-
-  completedLabel: {
-    color: '#7DFFB2',
-    fontWeight: '800',
-  },
-
-  projectRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.panel,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: 24,
-    padding: 14,
-    gap: 16,
-    marginBottom: 14,
-  },
-
-  completedProjectRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#14211A',
-    borderWidth: 1,
-    borderColor: '#2E7D4F',
-    borderRadius: 24,
-    padding: 14,
-    gap: 16,
-    marginBottom: 14,
-  },
-
-  projectImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 18,
-    backgroundColor: colors.graphite,
-  },
-
-  completedProjectImage: {
-    width: 110,
-    height: 110,
-    borderRadius: 18,
-    opacity: 0.82,
-  },
-
-  projectHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-
-  projectTitle: {
-    fontSize: 30,
-    lineHeight: 34,
-    flex: 1,
-  },
-
-  completedProjectTitle: {
-    fontSize: 30,
-    lineHeight: 34,
-    flex: 1,
-    color: '#D7FFE7',
-  },
-
-  pillRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 10,
-  },
-
-  updateText: {
-    color: colors.steel,
-    marginTop: 10,
-  },
-
-  completedText: {
-    color: '#A7D9BA',
-    marginTop: 10,
-  },
-
-  completedDate: {
-    color: '#7DFFB2',
-    marginTop: 8,
-    fontWeight: '700',
-  },
-
-  progressRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginTop: 16,
-  },
-
-  progressLabel: {
-    width: 42,
-    color: colors.white,
-    fontWeight: '800',
-  },
-
-  progressTrack: {
-    flex: 1,
-    height: 10,
-    backgroundColor: colors.graphite,
-    borderRadius: 999,
-    overflow: 'hidden',
-  },
-
-  progressFill: {
-    height: '100%',
-    backgroundColor: colors.orange,
   },
 
   createCard: {
