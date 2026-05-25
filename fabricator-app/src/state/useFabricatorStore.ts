@@ -7,7 +7,14 @@ import * as mock from './mockData';
 type LegacyDashboardWidget = Omit<DashboardWidget,'type'> & { type:DashboardWidget['type']|'sessionTimer' };
 type LegacyQuickAction = Omit<QuickAction,'type'> & { type:QuickAction['type']|'session' };
 type SavedLayout = { preset:DashboardPreset; widgets:LegacyDashboardWidget[]; quickActions:LegacyQuickAction[] };
-type ProjectInput = { name:string; category:ProjectCategory; phase:ProjectPhase; status:ProjectStatus; hook?:string };
+type ProjectInput = {
+  name:string;
+  category:ProjectCategory;
+  phase:ProjectPhase;
+  status:ProjectStatus;
+  hook?:string;
+  budgetTarget?:number;
+};
 type PersistedData = {
 selectedProjectId:string;
 projects:Project[];
@@ -138,7 +145,29 @@ selectedProjectId:'p1',projects:mock.projects,sessions:mock.sessions,voiceNotes:
 dashboardPreset:'Fabricator',dashboardWidgets:presetWidgets.Fabricator,quickActions,hasLoadedAppData:false,
 selectProject:(id)=>{set({selectedProjectId:id}); setTimeout(()=>{get().loadDashboardLayout();get().saveAppData();},0);},
 activeProject:()=>get().projects.find(p=>p.id===get().selectedProjectId),
-addProject:(input)=>set(s=>{const id=nextId('p');persistSoon(get);return {selectedProjectId:id,projects:[{id,name:input.name,category:input.category,phase:input.phase,status:input.status,progress:0,hook:input.hook||'Keep momentum by capturing tasks, parts, photos, and shop activity.',updatedAt:today()},...s.projects]}}),
+addProject:(input)=>set(s=>{
+const id=nextId('p');
+
+persistSoon(get);
+
+return {
+selectedProjectId:id,
+projects:[
+{
+id,
+name:input.name,
+category:input.category,
+phase:input.phase,
+status:input.status,
+progress:0,
+hook:input.hook||'Keep momentum by capturing tasks, parts, photos, and shop activity.',
+budgetTarget:input.budgetTarget || 0,
+updatedAt:today()
+},
+...s.projects
+]
+}
+}),
 updateProject:(
   id,
   input:Partial<

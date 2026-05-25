@@ -14,6 +14,9 @@ export function ProjectEditScreen({ navigation }: NativeStackScreenProps<any>) {
 
   const [name, setName] = useState(project?.name ?? '');
   const [category, setCategory] = useState<string>(project?.category ?? 'Metal Fabrication');
+  const [budgetTarget, setBudgetTarget] = useState(
+  String(project?.budgetTarget || '')
+    );
   const [phase, setPhase] = useState<string>(project?.phase ?? 'Planning');
   const [status, setStatus] = useState<string>(project?.status ?? 'Active');
   const [progress, setProgress] = useState(String(project?.progress ?? 0));
@@ -32,6 +35,9 @@ export function ProjectEditScreen({ navigation }: NativeStackScreenProps<any>) {
       name: name.trim() || project.name,
       category: category as any,
       phase: phase as any,
+      budgetTarget: budgetTarget
+      ? Number(budgetTarget)
+      : 0,
       status: status as any,
       progress: Number(progress) || 0,
       hook,
@@ -89,7 +95,14 @@ export function ProjectEditScreen({ navigation }: NativeStackScreenProps<any>) {
           placeholderTextColor={colors.steel}
           style={inputStyle}
         />
-
+        <TextInput
+          placeholder="Budget Target"
+          placeholderTextColor={colors.steel}
+          value={budgetTarget}
+          onChangeText={setBudgetTarget}
+          keyboardType="numeric"
+          style={inputStyle}
+        />
         <TextInput
           value={phase}
           onChangeText={text => setPhase(text)}
