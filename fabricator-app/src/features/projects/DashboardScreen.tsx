@@ -13,6 +13,7 @@ import { Screen } from '@/components/Screen';
 import { AppText, Label, Title } from '@/components/Text';
 import { useFabricatorStore } from '@/state/useFabricatorStore';
 import { colors } from '@/theme/theme';
+import { RecentActivityWidget } from '@/components/dashboard/widgets/RecentActivityWidget';
 
 export function DashboardScreen() {
   const navigation = useNavigation<any>();
@@ -121,6 +122,8 @@ export function DashboardScreen() {
             </AppText>
           ) : null}
         </Card>
+
+        <RecentActivityWidget />
 
         <Card>
           <Label>WORKSHOP TOOLS</Label>

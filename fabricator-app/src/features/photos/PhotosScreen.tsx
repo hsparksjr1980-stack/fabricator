@@ -169,6 +169,49 @@ style={styles.input}
       : 'Set as Cover'}
   </AppText>
 </Pressable>
+{p.isMilestone ? (
+  <View style={styles.milestoneBadge}>
+    <MaterialCommunityIcons
+      name="trophy"
+      size={14}
+      color={colors.black}
+    />
+
+    <AppText style={styles.milestoneBadgeText}>
+      {p.milestoneTitle || 'Milestone'}
+    </AppText>
+  </View>
+) : null}
+
+<Pressable
+  onPress={() => {
+    if (p.isMilestone) {
+      store.removePhotoMilestone(p.id);
+    } else {
+      store.setPhotoMilestone(
+        p.id,
+        'Build Milestone'
+      );
+    }
+  }}
+  style={styles.milestoneAction}
+>
+  <MaterialCommunityIcons
+    name={
+      p.isMilestone
+        ? 'flag-remove-outline'
+        : 'flag-checkered'
+    }
+    size={16}
+    color={colors.orange}
+  />
+
+  <AppText style={styles.milestoneActionText}>
+    {p.isMilestone
+      ? 'Remove Milestone'
+      : 'Mark as Milestone'}
+  </AppText>
+</Pressable>
 </View>
 </ImageBackground>
 </Pressable>)}
@@ -258,6 +301,36 @@ coverAction:{
 },
 
 coverActionText:{
+  color:colors.orange,
+  fontWeight:'800',
+  fontSize:12,
+},
+milestoneBadge:{
+  flexDirection:'row',
+  alignItems:'center',
+  alignSelf:'flex-start',
+  gap:6,
+  backgroundColor:'#FFD166',
+  paddingHorizontal:10,
+  paddingVertical:6,
+  borderRadius:999,
+  marginTop:10,
+},
+
+milestoneBadgeText:{
+  color:colors.black,
+  fontSize:11,
+  fontWeight:'900',
+},
+
+milestoneAction:{
+  flexDirection:'row',
+  alignItems:'center',
+  gap:6,
+  marginTop:10,
+},
+
+milestoneActionText:{
   color:colors.orange,
   fontWeight:'800',
   fontSize:12,

@@ -35,6 +35,7 @@ activeProject:()=>Project|undefined;
 addProject:(input:ProjectInput)=>void;
 setProjectCoverPhoto:(photoId:string)=>void;
 removeProjectCoverPhoto:()=>void;
+
 updateProject:(
   id:string,
   input:Partial<
@@ -50,6 +51,8 @@ addVoiceNote:(transcript:string)=>void;
 addTask:(title:string,system:string,createPart?:boolean)=>void;
 addPart:(name:string,system:string,vendor?:string,partNumber?:string,description?:string)=>void;
 addPhoto:(caption:string,tag:string,uri?:string)=>void;
+setPhotoMilestone:(photoId:string,title:string)=>void;
+removePhotoMilestone:(photoId:string)=>void;
 cycleTask:(id:string)=>void;
 cyclePart:(id:string)=>void;
 toggleWidget:(id:string)=>void;
@@ -226,7 +229,37 @@ removeProjectCoverPhoto:()=>set(s=>{
     )
   };
 }),
+setPhotoMilestone:(photoId,title)=>set(s=>{
+  persistSoon(get);
 
+  return {
+    photos:s.photos.map(photo =>
+      photo.id===photoId
+        ? {
+            ...photo,
+            isMilestone:true,
+            milestoneTitle:title,
+          }
+        : photo
+    )
+  };
+}),
+
+removePhotoMilestone:(photoId)=>set(s=>{
+  persistSoon(get);
+
+  return {
+    photos:s.photos.map(photo =>
+      photo.id===photoId
+        ? {
+            ...photo,
+            isMilestone:false,
+            milestoneTitle:undefined,
+          }
+        : photo
+    )
+  };
+}),
 cycleTask:(id)=>set(s=>{persistSoon(get);return {tasks:s.tasks.map(t=>t.id===id?{...t,status:t.status==='To Do'?'In Progress':t.status==='In Progress'?'Done':'To Do',updatedAt:now()}:t)}}),
 cyclePart:(id)=>set(s=>{persistSoon(get);return {parts:s.parts.map(p=>p.id===id?{...p,status:p.status==='Need to Order'?'On Hand':p.status==='On Hand'?'Installed':'Need to Order',updatedAt:now()}:p)}}),
 toggleWidget:(id)=>set(s=>{persistLayoutSoon(get);return {dashboardWidgets:s.dashboardWidgets.map(w=>w.id===id?{...w,enabled:!w.enabled}:w)}}),

@@ -82,9 +82,12 @@ export interface BuildPhoto {
  createdAt: string;
  sessionId?: string;
 
- // Stage 1 groundwork
+ // Milestones
  isMilestone?: boolean;
  milestoneTitle?: string;
+
+ // Future before/after comparison support
+ comparisonGroup?: string;
 }
 
 export interface AiSummary {
