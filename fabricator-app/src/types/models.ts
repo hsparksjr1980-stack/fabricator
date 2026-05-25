@@ -65,6 +65,8 @@ export interface Part {
  system: string;
  status: PartStatus;
  vendor?: string;
+ estimatedCost?: number;
+ actualCost?: number;
  partNumber?: string;
  description?: string;
  notes?: string;

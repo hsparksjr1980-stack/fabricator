@@ -49,7 +49,15 @@ updateProject:(
 )=>void;
 addVoiceNote:(transcript:string)=>void;
 addTask:(title:string,system:string,createPart?:boolean)=>void;
-addPart:(name:string,system:string,vendor?:string,partNumber?:string,description?:string)=>void;
+addPart:(
+  name:string,
+  system:string,
+  vendor?:string,
+  partNumber?:string,
+  description?:string,
+  estimatedCost?:number,
+  actualCost?:number
+)=>void;
 addPhoto:(caption:string,tag:string,uri?:string)=>void;
 setPhotoMilestone:(photoId:string,title:string)=>void;
 removePhotoMilestone:(photoId:string)=>void;
@@ -169,12 +177,35 @@ tasks:[newTask,...s.tasks],
 parts:[...newParts,...s.parts]
 }
 }),
-addPart:(name,system,vendor,partNumber,description)=>set(s=>{
+addPart:(
+  name,
+  system,
+  vendor,
+  partNumber,
+  description,
+  estimatedCost,
+  actualCost
+)=>set(s=>{
 persistSoon(get);
 const partId=nextId('pa');
 const timestamp=now();
 return {
-parts:[{id:partId,projectId:s.selectedProjectId,name,system,status:'Need to Order',vendor,partNumber,description,createdAt:timestamp,updatedAt:timestamp},...s.parts]
+parts:[{
+  id:partId,
+  projectId:s.selectedProjectId,
+  name,
+  system,
+  status:'Need to Order',
+  vendor,
+  partNumber,
+  description,
+  estimatedCost,
+  actualCost,
+  createdAt:timestamp,
+  updatedAt:timestamp
+},
+...s.parts,
+],
 }
 }),
 addPhoto:(caption,tag,uri)=>set(s=>{
