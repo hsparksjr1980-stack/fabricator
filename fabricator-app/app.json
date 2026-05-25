@@ -10,15 +10,26 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.anonymous.fabricator"
+      "bundleIdentifier": "com.hsparks.fabricator",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Fabricator uses the camera to document build progress.",
+        "NSPhotoLibraryUsageDescription": "Fabricator stores project photos for build tracking.",
+        "NSMicrophoneUsageDescription": "Fabricator uses the microphone for garage voice notes."
+      }
     },
     "android": {
+      "package": "com.hsparks.fabricator",
       "adaptiveIcon": {
         "backgroundColor": "#121212"
       }
     },
     "web": {
       "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "5153d72f-8e6b-41e6-a152-91301638ca0e"
+      }
     }
   }
 }
