@@ -24,6 +24,9 @@ export interface Project {
  completedAt?: string;
  archivedAt?: string;
 
+ // Budgeting
+ budgetTarget?: number;
+
  // Stage 1
  coverPhotoId?: string;
 }
