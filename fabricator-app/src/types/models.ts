@@ -23,6 +23,9 @@ export interface Project {
  updatedAt: string;
  completedAt?: string;
  archivedAt?: string;
+
+ // Stage 1
+ coverPhotoId?: string;
 }
 
 export interface GarageSession {
@@ -78,6 +81,10 @@ export interface BuildPhoto {
  caption: string;
  createdAt: string;
  sessionId?: string;
+
+ // Stage 1 groundwork
+ isMilestone?: boolean;
+ milestoneTitle?: string;
 }
 
 export interface AiSummary {

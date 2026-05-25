@@ -89,10 +89,9 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
         <View style={styles.heroLayout}>
           <View style={{ flex: 1 }}>
             <Image
-              source={require('../../../assets/fabricator-logo.png')}
-              style={styles.logo}
-            />
-
+  source={require('../../../assets/fabricator-logo.png')}
+  style={styles.logo}
+/>
             <Label>WORKSHOP PROJECTS</Label>
 
             <Title style={styles.heroTitle}>
@@ -255,56 +254,60 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
 
         {activeProjectList.map((project, index) => (
           <Pressable
-            key={project.id}
-            onPress={() => openProject(project.id)}
-          >
-            <View style={styles.projectRow}>
-              <Image
-                source={{
-                  uri: projectImages[index % projectImages.length],
-                }}
-                style={styles.projectImage}
-              />
+  key={project.id}
+  onPress={() => openProject(project.id)}
+>
+  <View style={styles.projectRow}>
+    <Image
+      source={{
+        uri:
+          photos.find(
+            photo => photo.id === project.coverPhotoId
+          )?.uri ||
+          projectImages[index % projectImages.length],
+      }}
+      style={styles.projectImage}
+    />
 
-              <View style={{ flex: 1 }}>
-                <View style={styles.projectHeader}>
-                  <Title style={styles.projectTitle}>
-                    {project.name}
-                  </Title>
+    <View style={{ flex: 1 }}>
+      <View style={styles.projectHeader}>
+        <Title style={styles.projectTitle}>
+          {project.name}
+        </Title>
 
-                  <MaterialCommunityIcons
-                    name="dots-vertical"
-                    size={20}
-                    color={colors.steel}
-                  />
-                </View>
+        <MaterialCommunityIcons
+          name="dots-vertical"
+          size={20}
+          color={colors.steel}
+        />
+      </View>
 
-                <View style={styles.pillRow}>
-                  <StatusPill label={project.phase} />
-                  <StatusPill label={project.status} />
-                </View>
+      <View style={styles.pillRow}>
+        <StatusPill label={project.phase} />
+        <StatusPill label={project.status} />
+      </View>
 
-                <AppText style={styles.updateText}>
-                  Updated recently
-                </AppText>
+      <AppText style={styles.updateText}>
+        Updated recently
+      </AppText>
 
-                <View style={styles.progressRow}>
-                  <AppText style={styles.progressLabel}>
-                    {project.progress}%
-                  </AppText>
+      <View style={styles.progressRow}>
+        <AppText style={styles.progressLabel}>
+          {project.progress}%
+        </AppText>
 
-                  <View style={styles.progressTrack}>
-                    <View
-                      style={[
-                        styles.progressFill,
-                        { width: `${project.progress}%` },
-                      ]}
-                    />
-                  </View>
-                </View>
-              </View>
-            </View>
-          </Pressable>
+        <View style={styles.progressTrack}>
+          <View
+            style={[
+              styles.progressFill,
+              { width: `${project.progress}%` },
+            ]}
+          />
+        </View>
+      </View>
+    </View>
+  </View>
+</Pressable>
         ))}
 
         {completedProjectList.length ? (
@@ -319,16 +322,20 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
 
             {completedProjectList.map((project, index) => (
               <Pressable
-                key={project.id}
-                onPress={() => openProject(project.id)}
-              >
-                <View style={styles.completedProjectRow}>
-                  <Image
-                    source={{
-                      uri: projectImages[index % projectImages.length],
-                    }}
-                    style={styles.completedProjectImage}
-                  />
+              key={project.id}
+                    onPress={() => openProject(project.id)}
+>
+              <View style={styles.completedProjectRow}>
+              <Image
+                  source={{
+                    uri:
+                      photos.find(
+                        photo => photo.id === project.coverPhotoId
+                      )?.uri ||
+                      projectImages[index % projectImages.length],
+                  }}
+                  style={styles.completedProjectImage}
+                />
 
                   <View style={{ flex: 1 }}>
                     <View style={styles.projectHeader}>

@@ -33,7 +33,19 @@ hasLoadedAppData:boolean;
 selectProject:(id:string)=>void;
 activeProject:()=>Project|undefined;
 addProject:(input:ProjectInput)=>void;
-updateProject:(id:string,input:Partial<ProjectInput & {progress:number}>)=>void;
+setProjectCoverPhoto:(photoId:string)=>void;
+removeProjectCoverPhoto:()=>void;
+updateProject:(
+  id:string,
+  input:Partial<
+    ProjectInput & {
+      progress:number;
+      completedAt?:string;
+      archivedAt?:string;
+      coverPhotoId?:string;
+    }
+  >
+)=>void;
 addVoiceNote:(transcript:string)=>void;
 addTask:(title:string,system:string,createPart?:boolean)=>void;
 addPart:(name:string,system:string,vendor?:string,partNumber?:string,description?:string)=>void;
@@ -116,7 +128,31 @@ dashboardPreset:'Fabricator',dashboardWidgets:presetWidgets.Fabricator,quickActi
 selectProject:(id)=>{set({selectedProjectId:id}); setTimeout(()=>{get().loadDashboardLayout();get().saveAppData();},0);},
 activeProject:()=>get().projects.find(p=>p.id===get().selectedProjectId),
 addProject:(input)=>set(s=>{const id=nextId('p');persistSoon(get);return {selectedProjectId:id,projects:[{id,name:input.name,category:input.category,phase:input.phase,status:input.status,progress:0,hook:input.hook||'Keep momentum by capturing tasks, parts, photos, and shop activity.',updatedAt:today()},...s.projects]}}),
-updateProject:(id,input)=>set(s=>{persistSoon(get);return {projects:s.projects.map(p=>p.id===id?{...p,...input,updatedAt:today()}:p)}}),
+updateProject:(
+  id,
+  input:Partial<
+    ProjectInput & {
+      progress:number;
+      completedAt?:string;
+      archivedAt?:string;
+      coverPhotoId?:string;
+    }
+  >
+)=>set(s=>{
+  persistSoon(get);
+
+  return {
+    projects:s.projects.map(p =>
+      p.id===id
+        ? {
+            ...p,
+            ...input,
+            updatedAt:today(),
+          }
+        : p
+    )
+  };
+}),
 addVoiceNote:(transcript)=>set(s=>{persistSoon(get);return {voiceNotes:[{id:nextId('v'),projectId:s.selectedProjectId,transcript,createdAt:today()},...s.voiceNotes]}}),
 addTask:(title,system,createPart)=>set(s=>{
 persistSoon(get);
@@ -139,13 +175,58 @@ parts:[{id:partId,projectId:s.selectedProjectId,name,system,status:'Need to Orde
 }
 }),
 addPhoto:(caption,tag,uri)=>set(s=>{
-persistSoon(get);
-const photoId=nextId('ph');
-const timestamp=now();
-return {
-photos:[{id:photoId,projectId:s.selectedProjectId,caption,tag,uri:uri||'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=900',createdAt:timestamp},...s.photos]
-}
+  persistSoon(get);
+
+  const photoId=nextId('ph');
+  const timestamp=now();
+
+  return {
+    photos:[
+      {
+        id:photoId,
+        projectId:s.selectedProjectId,
+        caption,
+        tag,
+        uri:uri||'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=900',
+        createdAt:timestamp
+      },
+      ...s.photos
+    ]
+  };
 }),
+
+setProjectCoverPhoto:(photoId)=>set(s=>{
+  persistSoon(get);
+
+  return {
+    projects:s.projects.map(project =>
+      project.id===s.selectedProjectId
+        ? {
+            ...project,
+            coverPhotoId:photoId,
+            updatedAt:today(),
+          }
+        : project
+    )
+  };
+}),
+
+removeProjectCoverPhoto:()=>set(s=>{
+  persistSoon(get);
+
+  return {
+    projects:s.projects.map(project =>
+      project.id===s.selectedProjectId
+        ? {
+            ...project,
+            coverPhotoId:undefined,
+            updatedAt:today(),
+          }
+        : project
+    )
+  };
+}),
+
 cycleTask:(id)=>set(s=>{persistSoon(get);return {tasks:s.tasks.map(t=>t.id===id?{...t,status:t.status==='To Do'?'In Progress':t.status==='In Progress'?'Done':'To Do',updatedAt:now()}:t)}}),
 cyclePart:(id)=>set(s=>{persistSoon(get);return {parts:s.parts.map(p=>p.id===id?{...p,status:p.status==='Need to Order'?'On Hand':p.status==='On Hand'?'Installed':'Need to Order',updatedAt:now()}:p)}}),
 toggleWidget:(id)=>set(s=>{persistLayoutSoon(get);return {dashboardWidgets:s.dashboardWidgets.map(w=>w.id===id?{...w,enabled:!w.enabled}:w)}}),

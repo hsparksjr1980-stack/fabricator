@@ -1,4 +1,10 @@
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import {
+  Image,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 
@@ -17,6 +23,10 @@ export function DashboardScreen() {
     navigation.navigate('Welcome');
     return null;
   }
+
+  const coverPhoto = store.photos.find(
+  photo => photo.id === project.coverPhotoId
+  );
 
   const projectTasks = store.tasks.filter(
     task => task.projectId === project.id
@@ -49,6 +59,12 @@ export function DashboardScreen() {
         </Pressable>
 
         <Card style={styles.heroCard}>
+          {coverPhoto?.uri ? (
+          <Image
+          source={{ uri: coverPhoto.uri }}
+          style={styles.heroImage}
+          />
+          ) : null}
           <Label>{project.category}</Label>
 
           <Title style={styles.projectTitle}>
@@ -167,7 +183,12 @@ const styles = StyleSheet.create({
     color: colors.orange,
     fontWeight: '800',
   },
-
+  heroImage: {
+  width: '100%',
+  height: 220,
+  borderRadius: 18,
+  marginBottom: 18,
+  },
   heroCard: {
     marginBottom: 18,
   },

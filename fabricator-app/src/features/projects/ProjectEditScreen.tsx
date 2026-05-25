@@ -45,7 +45,6 @@ export function ProjectEditScreen({ navigation }: NativeStackScreenProps<any>) {
       status: 'Completed',
       phase: 'Complete',
       progress: 100,
-      completedAt: new Date().toISOString(),
     });
 
     setStatus('Completed');

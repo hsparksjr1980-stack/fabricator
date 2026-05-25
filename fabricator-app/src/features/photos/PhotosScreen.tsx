@@ -16,6 +16,7 @@ const tags=['All','Fabrication','Engine','Wiring','Paint','Interior','Suspension
 
 export function PhotosScreen(){
 const store=useFabricatorStore();
+const project=store.activeProject();
 const [caption,setCaption]=useState('');
 const [tag,setTag]=useState('Fabrication');
 const [uri,setUri]=useState('');
@@ -137,9 +138,37 @@ style={styles.input}
 <ImageBackground source={{uri:p.uri}} style={styles.tileImage} imageStyle={styles.tileImageStyle}>
 <LinearGradient colors={['transparent','rgba(0,0,0,0.85)']} style={styles.tileShade}/>
 <View style={styles.tileText}>
+{project?.coverPhotoId === p.id ? (
+  <View style={styles.coverBadge}>
+    <MaterialCommunityIcons
+      name="star"
+      size={12}
+      color={colors.black}
+    />
+    <AppText style={styles.coverBadgeText}>
+      COVER PHOTO
+    </AppText>
+  </View>
+) : null}    
 <StatusPill label={p.tag}/>
 <AppText style={styles.caption}>{p.caption}</AppText>
 <AppText style={styles.date}>{p.createdAt}</AppText>
+<Pressable
+  onPress={() => store.setProjectCoverPhoto(p.id)}
+  style={styles.coverAction}
+>
+  <MaterialCommunityIcons
+    name="image-filter-hdr"
+    size={16}
+    color={colors.orange}
+  />
+
+  <AppText style={styles.coverActionText}>
+    {project?.coverPhotoId === p.id
+      ? 'Current Cover'
+      : 'Set as Cover'}
+  </AppText>
+</Pressable>
 </View>
 </ImageBackground>
 </Pressable>)}
@@ -203,6 +232,36 @@ tileImage:{flex:1,justifyContent:'flex-end'},
 tileImageStyle:{borderRadius:radius.lg},
 tileShade:{...StyleSheet.absoluteFillObject},
 tileText:{padding:12},
+coverBadge:{
+  flexDirection:'row',
+  alignItems:'center',
+  alignSelf:'flex-start',
+  gap:6,
+  backgroundColor:colors.orange,
+  paddingHorizontal:10,
+  paddingVertical:6,
+  borderRadius:999,
+  marginBottom:10,
+},
+
+coverBadgeText:{
+  color:colors.black,
+  fontSize:11,
+  fontWeight:'900',
+},
+
+coverAction:{
+  flexDirection:'row',
+  alignItems:'center',
+  gap:6,
+  marginTop:10,
+},
+
+coverActionText:{
+  color:colors.orange,
+  fontWeight:'800',
+  fontSize:12,
+},
 caption:{color:colors.white,fontWeight:'800',marginTop:8},
 date:{color:colors.steel,fontSize:12,marginTop:4},
 emptyCard:{alignItems:'center',paddingVertical:40,borderStyle:'dashed'},
