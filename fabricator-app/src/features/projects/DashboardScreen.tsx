@@ -26,7 +26,7 @@ export function DashboardScreen() {
   }
 
   const coverPhoto = store.photos.find(
-  photo => photo.id === project.coverPhotoId
+    photo => photo.id === project.coverPhotoId
   );
 
   const projectTasks = store.tasks.filter(
@@ -40,6 +40,19 @@ export function DashboardScreen() {
   const projectParts = store.parts.filter(
     part => part.projectId === project.id
   );
+
+  const estimatedTotal = projectParts.reduce(
+    (sum, part) => sum + (part.estimatedCost || 0),
+    0
+  );
+
+  const actualTotal = projectParts.reduce(
+    (sum, part) => sum + (part.actualCost || 0),
+    0
+  );
+
+  const remainingBudget =
+    (project.budgetTarget || 0) - actualTotal;
 
   return (
     <Screen>
@@ -61,11 +74,12 @@ export function DashboardScreen() {
 
         <Card style={styles.heroCard}>
           {coverPhoto?.uri ? (
-          <Image
-          source={{ uri: coverPhoto.uri }}
-          style={styles.heroImage}
-          />
+            <Image
+              source={{ uri: coverPhoto.uri }}
+              style={styles.heroImage}
+            />
           ) : null}
+
           <Label>{project.category}</Label>
 
           <Title style={styles.projectTitle}>
@@ -108,6 +122,36 @@ export function DashboardScreen() {
             <Title>{projectParts.length}</Title>
           </Card>
         </View>
+
+        <Card style={styles.budgetCard}>
+          <Label>PROJECT BUDGET</Label>
+
+          <View style={styles.budgetRow}>
+            <View style={styles.budgetColumn}>
+              <AppText style={styles.budgetLabel}>Target</AppText>
+              <Title>${(project.budgetTarget || 0).toLocaleString()}</Title>
+            </View>
+
+            <View style={styles.budgetColumn}>
+              <AppText style={styles.budgetLabel}>Actual</AppText>
+              <Title>${actualTotal.toLocaleString()}</Title>
+            </View>
+          </View>
+
+          <View style={styles.budgetRow}>
+            <View style={styles.budgetColumn}>
+              <AppText style={styles.budgetLabel}>Estimated</AppText>
+              <Title>${estimatedTotal.toLocaleString()}</Title>
+            </View>
+
+            <View style={styles.budgetColumn}>
+              <AppText style={styles.budgetLabel}>Remaining</AppText>
+              <Title style={{color:remainingBudget < 0 ? '#FF6B6B' : '#7DFFB2'}}>
+                ${Math.abs(remainingBudget).toLocaleString()}
+              </Title>
+            </View>
+          </View>
+        </Card>
 
         <Card>
           <Label>PROJECT STATUS</Label>
@@ -186,12 +230,14 @@ const styles = StyleSheet.create({
     color: colors.orange,
     fontWeight: '800',
   },
+
   heroImage: {
-  width: '100%',
-  height: 220,
-  borderRadius: 18,
-  marginBottom: 18,
+    width: '100%',
+    height: 220,
+    borderRadius: 18,
+    marginBottom: 18,
   },
+
   heroCard: {
     marginBottom: 18,
   },
@@ -238,6 +284,31 @@ const styles = StyleSheet.create({
 
   statCard: {
     flex: 1,
+  },
+
+  budgetCard: {
+    marginBottom: 18,
+  },
+
+  budgetRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 14,
+  },
+
+  budgetColumn: {
+    flex: 1,
+    backgroundColor: colors.graphite,
+    borderRadius: 16,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+
+  budgetLabel: {
+    color: colors.steel,
+    marginBottom: 8,
+    fontWeight: '700',
   },
 
   statusText: {
