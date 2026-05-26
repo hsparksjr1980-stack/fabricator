@@ -12,6 +12,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hsparks.fabricator",
+      "buildNumber": "25",
       "infoPlist": {
         "NSCameraUsageDescription": "Fabricator uses the camera to document build progress.",
         "NSPhotoLibraryUsageDescription": "Fabricator stores project photos for build tracking.",
