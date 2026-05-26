@@ -16,7 +16,6 @@ web-build/
 
 # Node dependencies
 node_modules/
-package-lock.json
 yarn.lock
 
 # IDE
