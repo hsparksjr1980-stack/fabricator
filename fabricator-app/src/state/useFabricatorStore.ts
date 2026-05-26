@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import { BuildPhoto, BuildTask, DashboardPreset, DashboardWidget, GarageSession, Part, Project, ProjectCategory, ProjectPhase, ProjectStatus, QuickAction, VoiceNote } from '@/types/models';
-import { dashboardLayoutStorage } from '@/services/storage/dashboardLayoutStorage';
-import { appDataStorage } from '@/services/storage/appDataStorage';
+import { BuildPhoto, BuildTask, DashboardPreset, DashboardWidget, GarageSession, Part, Project, ProjectCategory, ProjectPhase, ProjectStatus, QuickAction, VoiceNote } from '../types/models';
+import { dashboardLayoutStorage } from '../services/storage/dashboardLayoutStorage';
+import { appDataStorage } from '../services/storage/appDataStorage';
 import * as mock from './mockData';
 
 type LegacyDashboardWidget = Omit<DashboardWidget,'type'> & { type:DashboardWidget['type']|'sessionTimer' };
@@ -128,8 +128,10 @@ return copy;
 
 const currentLayout=(s:Store)=>({preset:s.dashboardPreset,widgets:s.dashboardWidgets,quickActions:s.quickActions});
 const currentData=(s:Store):PersistedData=>({selectedProjectId:s.selectedProjectId,projects:s.projects,sessions:s.sessions,voiceNotes:s.voiceNotes,tasks:s.tasks,parts:s.parts,photos:s.photos});
-const persistSoon=(get:()=>Store)=>setTimeout(()=>get().saveAppData(),0);
-const persistLayoutSoon=(get:()=>Store)=>setTimeout(()=>get().saveDashboardLayout(),0);
+//const persistSoon=(get:()=>Store)=>setTimeout(()=>get().saveAppData(),0);
+//const persistLayoutSoon=(get:()=>Store)=>setTimeout(()=>get().saveDashboardLayout(),0);
+const persistSoon = (_get: () => Store) => {};
+const persistLayoutSoon = (_get: () => Store) => {};
 const migrateWidgets=(widgets:LegacyDashboardWidget[]):DashboardWidget[]=>{
 const hasActivity=widgets.some(w=>w.type==='recentActivity');
 const migrated=widgets
@@ -139,11 +141,13 @@ return hasActivity?migrated:[...migrated,{id:'activity',type:'recentActivity',ti
 };
 const migrateQuickActions=(actions:LegacyQuickAction[]):QuickAction[]=>actions.filter((action):action is QuickAction=>action.type!=='session');
 
-export const useFabricatorStore = create<Store>()((set,get)=>(
-{
-selectedProjectId:'p1',projects:mock.projects,sessions:mock.sessions,voiceNotes:mock.voiceNotes,tasks:mock.tasks,parts:mock.parts,photos:mock.photos,
+export const useFabricatorStore = create<Store>()((set, get) => ({
+  selectedProjectId:'p1',projects:mock.projects,sessions:mock.sessions,voiceNotes:mock.voiceNotes,tasks:mock.tasks,parts:mock.parts,photos:mock.photos,
 dashboardPreset:'Fabricator',dashboardWidgets:presetWidgets.Fabricator,quickActions,hasLoadedAppData:false,
-selectProject:(id)=>{set({selectedProjectId:id}); setTimeout(()=>{get().loadDashboardLayout();get().saveAppData();},0);},
+//selectProject:(id)=>{set({selectedProjectId:id}); setTimeout(()=>{get().loadDashboardLayout();get().saveAppData();},0);},
+selectProject:(id)=>{
+  set({ selectedProjectId:id });
+},
 activeProject:()=>get().projects.find(p=>p.id===get().selectedProjectId),
 addProject:(input)=>set(s=>{
 const id=nextId('p');
@@ -328,7 +332,8 @@ moveWidget:(id,direction)=>set(s=>{persistLayoutSoon(get);return {dashboardWidge
 applyDashboardPreset:(preset)=>{set({dashboardPreset:preset,dashboardWidgets:presetWidgets[preset]});persistLayoutSoon(get);},
 toggleQuickAction:(id)=>set(s=>{persistLayoutSoon(get);return {quickActions:s.quickActions.map(a=>a.id===id?{...a,enabled:!a.enabled}:a)}}),
 saveDashboardLayout:async()=>{const s=get(); await dashboardLayoutStorage.save(storageKey(s.selectedProjectId),currentLayout(s));},
-loadDashboardLayout:async()=>{const s=get(); const saved=await dashboardLayoutStorage.load(storageKey(s.selectedProjectId)); if(saved){set({dashboardPreset:saved.preset,dashboardWidgets:migrateWidgets(saved.widgets),quickActions:migrateQuickActions(saved.quickActions)});}},
+//loadDashboardLayout:async()=>{const s=get(); const saved=await dashboardLayoutStorage.load(storageKey(s.selectedProjectId)); if(saved){set({dashboardPreset:saved.preset,dashboardWidgets:migrateWidgets(saved.widgets),quickActions:migrateQuickActions(saved.quickActions)});}},
+loadDashboardLayout:async()=>{},
 saveAppData:async()=>{await appDataStorage.save(currentData(get()));},
 loadAppData:async()=>{const saved=await appDataStorage.load(); if(saved){set({...saved,hasLoadedAppData:true});}else{set({hasLoadedAppData:true});}},
 resetDemoData:async()=>{await appDataStorage.clear();set({selectedProjectId:'p1',projects:mock.projects,sessions:mock.sessions,voiceNotes:mock.voiceNotes,tasks:mock.tasks,parts:mock.parts,photos:mock.photos});}
