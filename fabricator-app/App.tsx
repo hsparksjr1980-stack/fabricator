@@ -10,7 +10,13 @@ export default function App() {
         alignItems: 'center',
       }}
     >
-      <Text style={{ color: 'white', fontSize: 32 }}>
+      <Text
+        style={{
+          color: 'white',
+          fontSize: 32,
+          fontWeight: '700',
+        }}
+      >
         Fabricator Works
       </Text>
     </View>
