@@ -8,17 +8,16 @@ import { useFabricatorStore } from './src/state/useFabricatorStore';
 import { colors } from './src/theme/theme';
 
 export default function App() {
-  const hasLoadedAppData = useFabricatorStore(
-    state => state.hasLoadedAppData
-  );
+  const hasLoadedAppData = true;
+
 
   const loadAppData = useFabricatorStore(
     state => state.loadAppData
   );
 
-  useEffect(() => {
-    loadAppData();
-  }, [loadAppData]);
+  //useEffect(() => {
+  //  loadAppData();
+  //}, [loadAppData]);
 
   if (!hasLoadedAppData) {
     return (
