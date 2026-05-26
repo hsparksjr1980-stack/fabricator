@@ -70,8 +70,9 @@ export default function App() {
   }
 
   return (
-    <AuthProvider>
-      <RootApp />
-    </AuthProvider>
+  <NavigationContainer>
+    <StatusBar style="light" backgroundColor={colors.black} />
+    <AppNavigator />
+  </NavigationContainer>
   );
 }
