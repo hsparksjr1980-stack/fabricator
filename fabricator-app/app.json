@@ -3,8 +3,8 @@
     "name": "Fabricator",
     "slug": "fabricator",
     "version": "0.1.0",
-   "orientation": "portrait",
-   "userInterfaceStyle": "dark",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
     "jsEngine": "jsc",
     "assetBundlePatterns": [
       "**/*"
@@ -32,6 +32,9 @@
       "eas": {
         "projectId": "5153d72f-8e6b-41e6-a152-91301638ca0e"
       }
-    }
+    },
+    "plugins": [
+      "expo-font"
+    ]
   }
 }
