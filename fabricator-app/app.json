@@ -3,8 +3,9 @@
     "name": "Fabricator",
     "slug": "fabricator",
     "version": "0.1.0",
-    "orientation": "portrait",
-    "userInterfaceStyle": "dark",
+   "orientation": "portrait",
+   "userInterfaceStyle": "dark",
+    "jsEngine": "jsc",
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -14,7 +15,8 @@
       "infoPlist": {
         "NSCameraUsageDescription": "Fabricator uses the camera to document build progress.",
         "NSPhotoLibraryUsageDescription": "Fabricator stores project photos for build tracking.",
-        "NSMicrophoneUsageDescription": "Fabricator uses the microphone for garage voice notes."
+        "NSMicrophoneUsageDescription": "Fabricator uses the microphone for garage voice notes.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
