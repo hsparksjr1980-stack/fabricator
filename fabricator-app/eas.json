@@ -12,7 +12,10 @@
       "distribution": "internal"
     },
     "production": {
-      "autoIncrement": true
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://ozlhzymeerielmkiyomu.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "your_key_here"
+    }
     }
   },
   "submit": {
