@@ -6,13 +6,26 @@
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
     "jsEngine": "jsc",
+
+    "icon": "./assets/AppLogo.png",
+
+    "splash": {
+      "image": "./assets/fabricator-logo.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#121212"
+    },
+
     "assetBundlePatterns": [
       "**/*"
     ],
+
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hsparks.fabricator",
       "buildNumber": "25",
+
+      "icon": "./assets/AppLogo.png",
+
       "infoPlist": {
         "NSCameraUsageDescription": "Fabricator uses the camera to document build progress.",
         "NSPhotoLibraryUsageDescription": "Fabricator stores project photos for build tracking.",
@@ -20,20 +33,26 @@
         "ITSAppUsesNonExemptEncryption": false
       }
     },
+
     "android": {
       "package": "com.hsparks.fabricator",
+
       "adaptiveIcon": {
+        "foregroundImage": "./assets/AppLogo.png",
         "backgroundColor": "#121212"
       }
     },
+
     "web": {
       "bundler": "metro"
     },
+
     "extra": {
       "eas": {
         "projectId": "5153d72f-8e6b-41e6-a152-91301638ca0e"
       }
     },
+
     "plugins": [
       "expo-font"
     ]
