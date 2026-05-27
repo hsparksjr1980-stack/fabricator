@@ -7,6 +7,7 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { useEffect } from 'react';
 
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
@@ -20,10 +21,13 @@ export function DashboardScreen() {
   const store = useFabricatorStore();
   const project = store.activeProject();
 
-  if (!project) {
-    navigation.navigate('Welcome');
-    return null;
-  }
+  useEffect(() => {
+    if (!project) {
+      navigation.navigate('Welcome');
+    }
+  }, [project]);
+
+  if (!project) return null;
 
   const coverPhoto = store.photos.find(
     photo => photo.id === project.coverPhotoId
@@ -146,7 +150,7 @@ export function DashboardScreen() {
 
             <View style={styles.budgetColumn}>
               <AppText style={styles.budgetLabel}>Remaining</AppText>
-              <Title style={{color:remainingBudget < 0 ? '#FF6B6B' : '#7DFFB2'}}>
+              <Title style={{ color: remainingBudget < 0 ? '#FF6B6B' : '#7DFFB2' }}>
                 ${Math.abs(remainingBudget).toLocaleString()}
               </Title>
             </View>
