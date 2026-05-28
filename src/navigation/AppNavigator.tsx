@@ -21,7 +21,8 @@ import { colors, radius } from '@/theme/theme';
 import { WelcomeScreen } from '@/features/projects/WelcomeScreen';
 import { DashboardScreen } from '@/features/projects/DashboardScreen';
 import { ProjectEditScreen } from '@/features/projects/ProjectEditScreen';
-
+import { ProjectManagementModal } from '@/components/modals/ProjectManagementModal';
+import { EditProjectModal } from '@/components/modals/EditProjectModal';
 import { useFabricatorStore } from '@/state/useFabricatorStore';
 
 import { TimelineScreen } from '@/features/buildLog/TimelineScreen';
@@ -49,7 +50,11 @@ type RootStackParamList = {
   Main: NavigatorScreenParams<MainTabParamList>;
 };
 
-const Stack = createNativeStackNavigator<RootStackParamList>();
+const Stack =
+  createNativeStackNavigator<
+    RootStackParamList,
+    'RootStack'
+  >();
 const Tabs = createBottomTabNavigator<MainTabParamList>();
 
 const tabIcons: Record<
@@ -130,6 +135,7 @@ const activeProject =
   store.activeProject();
 
   return (
+    <>
     <Tabs.Navigator
       id="MainTabs"
       screenOptions={({ route }) => ({
@@ -172,7 +178,7 @@ const activeProject =
             }}
           >
             <Pressable
-              onPress={() => setProjectModalVisible(true) }
+              onPress={() => setProjectModalVisible(true)}
             >
               <MaterialCommunityIcons
                 name="folder-multiple-outline"
@@ -267,73 +273,64 @@ const activeProject =
         component={TimelineScreen}
       />
 
-      <Tabs.Screen
+            <Tabs.Screen
         name="Settings"
         component={SettingsScreen}
       />
     </Tabs.Navigator>
+
+    <ProjectManagementModal
+      visible={projectModalVisible}
+      onClose={() => setProjectModalVisible(false)}
+      onComplete={() => {
+        if (activeProject) {
+          store.completeProject(activeProject.id);
+        }
+        setProjectModalVisible(false);
+      }}
+      onArchive={() => {
+        if (activeProject) {
+          store.archiveProject(activeProject.id);
+        }
+        setProjectModalVisible(false);
+      }}
+      onReopen={() => {
+        if (activeProject) {
+          store.reopenProject(activeProject.id);
+        }
+        setProjectModalVisible(false);
+      }}
+    />
+
+    <EditProjectModal
+      visible={editProjectVisible}
+      onClose={() => setEditProjectVisible(false)}
+    />
+  </>
   );
 }
-
 export function AppNavigator() {
   return (
-    
-      <Stack.Navigator
-        id="RootStack"
-        initialRouteName="Welcome"
-        screenOptions={{
-          headerStyle: {
-            backgroundColor: colors.black,
-          },
+    <Stack.Navigator
+      id="RootStack"
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <Stack.Screen
+        name="Welcome"
+        component={WelcomeScreen}
+      />
 
-          headerTintColor: colors.white,
+      <Stack.Screen
+        name="ProjectEdit"
+        component={ProjectEditScreen}
+      />
 
-          headerShadowVisible: false,
-
-          contentStyle: {
-            backgroundColor: colors.black,
-          },
-        }}
-      >
-        <Stack.Screen
-          name="Welcome"
-          component={WelcomeScreen}
-          options={{
-            headerShown: false,
-          }}
-        />
-
-        <Stack.Screen
-          name="Main"
-          component={MainTabs}
-          options={{
-            headerShown: false,
-          }}
-        />
-
-        <Stack.Screen
-          name="ProjectEdit"
-          component={ProjectEditScreen}
-          options={({ navigation }) => ({
-            title: 'Project Configuration',
-
-            headerRight: () => (
-              <Pressable
-                onPress={() =>
-                  navigation.navigate('Main' as never)
-                }
-              >
-                <MaterialCommunityIcons
-                  name="view-dashboard"
-                  size={24}
-                  color={colors.orange}
-                />
-              </Pressable>
-            ),
-          })}
-        />
-      </Stack.Navigator>
-   
+      <Stack.Screen
+        name="Main"
+        component={MainTabs}
+      />
+    </Stack.Navigator>
   );
-  
 }

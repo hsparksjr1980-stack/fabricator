@@ -141,6 +141,13 @@ export type DashboardPreset =
   | 'Race Build'
   | 'Motorcycle Build';
 
+  export interface AiSummary {
+  completedWork: string[];
+  blockers: string[];
+  nextSteps: string[];
+  recommendations: string[];
+}
+
 export interface DashboardWidget {
   id: string;
 

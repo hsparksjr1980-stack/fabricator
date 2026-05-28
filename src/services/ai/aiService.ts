@@ -1,3 +1,31 @@
-import { AiSummary, GarageSession, VoiceNote } from '@/types/models';
-export interface AiService { summarizeBuildInput(input: { sessions: GarageSession[]; voiceNotes: VoiceNote[] }): Promise<AiSummary>; }
-export const mockAiService: AiService = { async summarizeBuildInput() { return { completedWork:['Cleaned frame section','Marked patch panel cuts','Captured missing shim issue'], remainingWork:['Finish rocker patch','Verify fuel line routing','Prime cleaned frame metal'], nextSessionChecklist:['Set out grinder and flap discs','Test fit cab bushings','Take before/after photos'], partsNeeded:['Cab bushings kit','Seam sealer','Weld-through primer'] }; } };
+import {
+  AiSummary,
+  GarageSession,
+  VoiceNote,
+} from '@/types/models';
+
+export interface AiService {
+  summarizeBuildInput(input: {
+    sessions: GarageSession[];
+    voiceNotes: VoiceNote[];
+  }): Promise<AiSummary>;
+}
+
+export const mockAiService: AiService = {
+  async summarizeBuildInput(_input) {
+    return {
+      completedWork: [
+        'Cleaned frame section',
+      ],
+      blockers: [
+        'Waiting on parts',
+      ],
+      nextSteps: [
+        'Finish welding',
+      ],
+      recommendations: [
+        'Document measurements before final assembly',
+      ],
+    };
+  },
+};

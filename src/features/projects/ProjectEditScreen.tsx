@@ -48,7 +48,7 @@ export function ProjectEditScreen({ navigation }: NativeStackScreenProps<any>) {
 
   const markComplete = () => {
     store.updateProject(project.id, {
-      status: 'Completed',
+      status: 'completed',
       phase: 'Complete',
       progress: 100,
     });
@@ -60,7 +60,7 @@ export function ProjectEditScreen({ navigation }: NativeStackScreenProps<any>) {
 
   const reopenProject = () => {
     store.updateProject(project.id, {
-      status: 'Active',
+      status: 'active',
     });
 
     setStatus('Active');
@@ -156,7 +156,7 @@ export function ProjectEditScreen({ navigation }: NativeStackScreenProps<any>) {
           remaining fully accessible for documentation and history tracking.
         </AppText>
 
-        {project.status !== 'Completed' ? (
+        {project.status !== 'completed' ? (
           <Pressable style={styles.completeButton} onPress={markComplete}>
             <AppText style={styles.completeButtonText}>
               Mark Project Complete
