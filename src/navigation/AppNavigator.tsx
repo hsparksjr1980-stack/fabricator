@@ -1,4 +1,5 @@
-import { Image, Pressable, View } from 'react-native';
+import { Image, Modal, Pressable, View } from 'react-native';
+import React from 'react';
 import {
   
   NavigatorScreenParams,
@@ -20,6 +21,8 @@ import { colors, radius } from '@/theme/theme';
 import { WelcomeScreen } from '@/features/projects/WelcomeScreen';
 import { DashboardScreen } from '@/features/projects/DashboardScreen';
 import { ProjectEditScreen } from '@/features/projects/ProjectEditScreen';
+
+import { useFabricatorStore } from '@/state/useFabricatorStore';
 
 import { TimelineScreen } from '@/features/buildLog/TimelineScreen';
 import { TasksScreen } from '@/features/tasks/TasksScreen';
@@ -110,6 +113,22 @@ const HeaderBrand = () => {
 function MainTabs() {
   const navigation = useNavigation();
 
+const [
+  projectModalVisible,
+  setProjectModalVisible,
+] = React.useState(false);
+
+const [
+  editProjectVisible,
+  setEditProjectVisible,
+] = React.useState(false);
+
+const store =
+  useFabricatorStore();
+
+const activeProject =
+  store.activeProject();
+
   return (
     <Tabs.Navigator
       id="MainTabs"
@@ -134,7 +153,7 @@ function MainTabs() {
           route.name === 'Dashboard' ? null : (
             <Pressable
               style={{ marginLeft: 14 }}
-              onPress={() => navigation.navigate('Main' as never)}
+              onPress={() => console.log('Project modal')}
             >
               <MaterialCommunityIcons
                 name="view-dashboard"
@@ -153,9 +172,7 @@ function MainTabs() {
             }}
           >
             <Pressable
-              onPress={() =>
-                navigation.getParent()?.navigate('Welcome' as never)
-              }
+              onPress={() => setProjectModalVisible(true) }
             >
               <MaterialCommunityIcons
                 name="folder-multiple-outline"
@@ -165,11 +182,9 @@ function MainTabs() {
             </Pressable>
 
             <Pressable
-              onPress={() =>
-                navigation.getParent()?.navigate(
-                  'ProjectEdit' as never
-                )
-              }
+            onPress={() => setEditProjectVisible(true)}
+
+
             >
               <MaterialCommunityIcons
                 name="square-edit-outline"
@@ -320,4 +335,5 @@ export function AppNavigator() {
       </Stack.Navigator>
    
   );
+  
 }

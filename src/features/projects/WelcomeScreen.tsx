@@ -45,19 +45,19 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
   }, [projects, search]);
 
   const activeProjectList = filteredProjects.filter(
-    project => project.status !== 'Completed'
+    project => project.status !== 'completed'
   );
 
   const completedProjectList = filteredProjects.filter(
-    project => project.status === 'Completed'
+    project => project.status === 'completed'
   );
 
   const activeProjects = projects.filter(
-    project => project.status === 'Active'
+    project => project.status === 'active'
   ).length;
 
   const completedProjects = projects.filter(
-    project => project.status === 'Completed'
+    project => project.status === 'completed'
   ).length;
 
   const createProject = () => {
