@@ -1,340 +1,900 @@
 import { create } from 'zustand';
-import { BuildPhoto, BuildTask, DashboardPreset, DashboardWidget, GarageSession, Part, Project, ProjectCategory, ProjectPhase, ProjectStatus, QuickAction, VoiceNote } from '../types/models';
-import { dashboardLayoutStorage } from '../services/storage/dashboardLayoutStorage';
+
+import {
+  BuildPhoto,
+  BuildTask,
+  DashboardPreset,
+  DashboardWidget,
+  GarageSession,
+  Part,
+  Project,
+  ProjectCategory,
+  ProjectPhase,
+  ProjectStatus,
+  QuickAction,
+  VoiceNote,
+} from '../types/models';
+
 import { appDataStorage } from '../services/storage/appDataStorage';
+
 import * as mock from './mockData';
 
-type LegacyDashboardWidget = Omit<DashboardWidget,'type'> & { type:DashboardWidget['type']|'sessionTimer' };
-type LegacyQuickAction = Omit<QuickAction,'type'> & { type:QuickAction['type']|'session' };
-type SavedLayout = { preset:DashboardPreset; widgets:LegacyDashboardWidget[]; quickActions:LegacyQuickAction[] };
 type ProjectInput = {
-  name:string;
-  category:ProjectCategory;
-  phase:ProjectPhase;
-  status:ProjectStatus;
-  hook?:string;
-  budgetTarget?:number;
+  name: string;
+  category: ProjectCategory;
+  phase: ProjectPhase;
+  status: ProjectStatus;
+  hook?: string;
+  budgetTarget?: number;
 };
+
 type PersistedData = {
-selectedProjectId:string;
-projects:Project[];
-sessions:GarageSession[];
-voiceNotes:VoiceNote[];
-tasks:BuildTask[];
-parts:Part[];
-photos:BuildPhoto[];
+  selectedProjectId: string;
+  projects: Project[];
+  sessions: GarageSession[];
+  voiceNotes: VoiceNote[];
+  tasks: BuildTask[];
+  parts: Part[];
+  photos: BuildPhoto[];
 };
 
 type Store = {
-selectedProjectId:string;
-projects:Project[];
-sessions:GarageSession[];
-voiceNotes:VoiceNote[];
-tasks:BuildTask[];
-parts:Part[];
-photos:BuildPhoto[];
-dashboardPreset:DashboardPreset;
-dashboardWidgets:DashboardWidget[];
-quickActions:QuickAction[];
-hasLoadedAppData:boolean;
-selectProject:(id:string)=>void;
-activeProject:()=>Project|undefined;
-addProject:(input:ProjectInput)=>void;
-setProjectCoverPhoto:(photoId:string)=>void;
-removeProjectCoverPhoto:()=>void;
+  selectedProjectId: string;
 
-updateProject:(
-  id:string,
-  input:Partial<
-    ProjectInput & {
-      progress:number;
-      completedAt?:string;
-      archivedAt?:string;
-      coverPhotoId?:string;
-    }
-  >
-)=>void;
-addVoiceNote:(transcript:string)=>void;
-addTask:(title:string,system:string,createPart?:boolean)=>void;
-addPart:(
-  name:string,
-  system:string,
-  vendor?:string,
-  partNumber?:string,
-  description?:string,
-  estimatedCost?:number,
-  actualCost?:number
-)=>void;
-addPhoto:(caption:string,tag:string,uri?:string)=>void;
-setPhotoMilestone:(photoId:string,title:string)=>void;
-removePhotoMilestone:(photoId:string)=>void;
-cycleTask:(id:string)=>void;
-cyclePart:(id:string)=>void;
-toggleWidget:(id:string)=>void;
-toggleWidgetSize:(id:string)=>void;
-moveWidget:(id:string,direction:'up'|'down')=>void;
-applyDashboardPreset:(preset:DashboardPreset)=>void;
-toggleQuickAction:(id:string)=>void;
-saveDashboardLayout:()=>Promise<void>;
-loadDashboardLayout:()=>Promise<void>;
-saveAppData:()=>Promise<void>;
-loadAppData:()=>Promise<void>;
-resetDemoData:()=>Promise<void>;
+  projectFilter:
+    | 'active'
+    | 'completed'
+    | 'archived';
+
+  projects: Project[];
+
+  sessions: GarageSession[];
+
+  voiceNotes: VoiceNote[];
+
+  tasks: BuildTask[];
+
+  parts: Part[];
+
+  photos: BuildPhoto[];
+
+  dashboardPreset: DashboardPreset;
+
+  dashboardWidgets: DashboardWidget[];
+
+  quickActions: QuickAction[];
+
+  hasLoadedAppData: boolean;
+
+  selectProject: (id: string) => void;
+
+  setProjectFilter: (
+    filter:
+      | 'active'
+      | 'completed'
+      | 'archived'
+  ) => void;
+
+  activeProject: () =>
+    | Project
+    | undefined;
+
+  addProject: (
+    input: ProjectInput
+  ) => void;
+
+  updateProject: (
+    id: string,
+    updates: Partial<Project>
+  ) => void;
+
+  completeProject: (
+    id: string
+  ) => void;
+
+  archiveProject: (
+    id: string
+  ) => void;
+
+  reopenProject: (
+    id: string
+  ) => void;
+
+  addTask: (
+    title: string,
+    system: string,
+    createPart?: boolean
+  ) => void;
+
+  updateTask: (
+    id: string,
+    updates: Partial<BuildTask>
+  ) => void;
+
+  deleteTask: (
+    id: string
+  ) => void;
+
+  cycleTask: (
+    id: string
+  ) => void;
+
+  addPart: (
+    name: string,
+    system: string,
+    vendor?: string,
+    partNumber?: string,
+    description?: string,
+    estimatedCost?: number,
+    actualCost?: number
+  ) => void;
+
+  updatePart: (
+    id: string,
+    updates: Partial<Part>
+  ) => void;
+
+  deletePart: (
+    id: string
+  ) => void;
+
+  cyclePart: (
+    id: string
+  ) => void;
+
+  toggleWidget: (
+    id: string
+  ) => void;
+
+  toggleWidgetSize: (
+    id: string
+  ) => void;
+
+  moveWidget: (
+    id: string,
+    direction: 'up' | 'down'
+  ) => void;
+
+  addPhoto: (
+    caption: string,
+    tag: string,
+    uri?: string
+  ) => void;
+
+  setPhotoMilestone: (
+    photoId: string,
+    title: string
+  ) => void;
+
+  removePhotoMilestone: (
+    photoId: string
+  ) => void;
+
+  setProjectCoverPhoto: (
+    photoId: string
+  ) => void;
+
+  addVoiceNote: (
+    transcript: string
+  ) => void;
+
+  saveAppData: () => Promise<void>;
+
+  loadAppData: () => Promise<void>;
 };
 
-const nextId = (p:string) => `${p}-${Date.now()}`;
-const today = () => new Date().toISOString().slice(0,10);
-const now = () => new Date().toISOString();
-const storageKey=(projectId:string)=>`dashboard:${projectId}`;
+const now = () =>
+  new Date().toISOString();
 
-const quickActions:QuickAction[] = [
-{id:'qa-task',type:'task',title:'Task',enabled:true},
-{id:'qa-part',type:'part',title:'Part',enabled:true},
-{id:'qa-photo',type:'photo',title:'Photo',enabled:true},
-{id:'qa-render',type:'render',title:'Advisor',enabled:true}
+const today = () =>
+  new Date().toISOString();
+
+const nextId = (
+  prefix: string
+) => `${prefix}-${Date.now()}`;
+
+let persistTimeout:
+  | ReturnType<typeof setTimeout>
+  | null = null;
+
+const persistSoon = (
+  get: () => Store
+) => {
+  if (persistTimeout) {
+    clearTimeout(persistTimeout);
+  }
+
+  persistTimeout = setTimeout(() => {
+    get().saveAppData();
+  }, 150);
+};
+
+const quickActions: QuickAction[] = [
+  {
+    id: 'qa-task',
+    type: 'task',
+    title: 'Task',
+    enabled: true,
+  },
+  {
+    id: 'qa-part',
+    type: 'part',
+    title: 'Part',
+    enabled: true,
+  },
+  {
+    id: 'qa-photo',
+    type: 'photo',
+    title: 'Photo',
+    enabled: true,
+  },
 ];
 
-const baseWidgets:DashboardWidget[] = [
-{id:'focus',type:'focus',title:'Today in Shop',enabled:true,size:'expanded'},
-{id:'quick',type:'quickActions',title:'Quick Actions',enabled:false,size:'compact'},
-{id:'progress',type:'progress',title:'Project Progress',enabled:true,size:'compact'},
-{id:'stats',type:'stats',title:'Build Stats',enabled:true,size:'compact'},
-{id:'next',type:'nextSession',title:'Next Session',enabled:true,size:'expanded'},
-{id:'blockers',type:'blockers',title:'Progress Blockers',enabled:true,size:'expanded'},
-{id:'parts',type:'parts',title:'Parts Needed',enabled:true,size:'compact'},
-{id:'materials',type:'materialsInventory',title:'Materials Inventory',enabled:true,size:'compact'},
-{id:'activity',type:'recentActivity',title:'Recent Shop Activity',enabled:true,size:'expanded'},
-{id:'photo',type:'photoFeature',title:'Photo Feature',enabled:true,size:'expanded'},
-{id:'creator',type:'creator',title:'Creator Export',enabled:false,size:'compact'}
+const widgets: DashboardWidget[] = [
+  {
+    id: 'focus',
+    type: 'focus',
+    title: 'Today in Shop',
+    enabled: true,
+    size: 'expanded',
+  },
 ];
 
-const presetWidgets:Record<DashboardPreset,DashboardWidget[]> = {
-Fabricator: baseWidgets,
-Woodworker: baseWidgets.map(w=>({...w,enabled:['focus','progress','next','materials','photo','activity'].includes(w.id)})),
-Restoration: baseWidgets.map(w=>({...w,enabled:['focus','progress','stats','next','parts','photo','blockers'].includes(w.id)})),
-'Content Creator': baseWidgets.map(w=>({...w,enabled:['focus','photo','creator','progress','next'].includes(w.id),size:w.id==='photo'?'expanded':w.size})),
-'Race Build': baseWidgets.map(w=>({...w,enabled:['focus','progress','stats','next','parts','blockers','activity'].includes(w.id)})),
-'Motorcycle Build': baseWidgets.map(w=>({...w,enabled:['focus','progress','next','parts','materials','photo','activity'].includes(w.id)}))
-};
+export const useFabricatorStore =
+  create<Store>()((set, get) => ({
+    selectedProjectId: 'p1',
 
-const reorder = (items:DashboardWidget[], id:string, direction:'up'|'down') => {
-const index = items.findIndex(w=>w.id===id);
-const target = direction==='up' ? index-1 : index+1;
-if(index<0 || target<0 || target>=items.length) return items;
-const copy=[...items];
-[copy[index],copy[target]]=[copy[target],copy[index]];
-return copy;
-};
+    projectFilter: 'active',
 
-const currentLayout=(s:Store)=>({preset:s.dashboardPreset,widgets:s.dashboardWidgets,quickActions:s.quickActions});
-const currentData=(s:Store):PersistedData=>({selectedProjectId:s.selectedProjectId,projects:s.projects,sessions:s.sessions,voiceNotes:s.voiceNotes,tasks:s.tasks,parts:s.parts,photos:s.photos});
-//const persistSoon=(get:()=>Store)=>setTimeout(()=>get().saveAppData(),0);
-//const persistLayoutSoon=(get:()=>Store)=>setTimeout(()=>get().saveDashboardLayout(),0);
-const persistSoon = (_get: () => Store) => {};
-const persistLayoutSoon = (_get: () => Store) => {};
-const migrateWidgets=(widgets:LegacyDashboardWidget[]):DashboardWidget[]=>{
-const hasActivity=widgets.some(w=>w.type==='recentActivity');
-const migrated=widgets
-.filter((w):w is DashboardWidget=>w.type!=='sessionTimer')
-.map(w=>w.id==='timer'?{...w,id:'activity',type:'recentActivity' as const,title:'Recent Shop Activity',size:'expanded' as const}:w);
-return hasActivity?migrated:[...migrated,{id:'activity',type:'recentActivity',title:'Recent Shop Activity',enabled:true,size:'expanded'}];
-};
-const migrateQuickActions=(actions:LegacyQuickAction[]):QuickAction[]=>actions.filter((action):action is QuickAction=>action.type!=='session');
+    projects: mock.projects,
 
-export const useFabricatorStore = create<Store>()((set, get) => ({
-  selectedProjectId:'p1',projects:mock.projects,sessions:mock.sessions,voiceNotes:mock.voiceNotes,tasks:mock.tasks,parts:mock.parts,photos:mock.photos,
-dashboardPreset:'Fabricator',dashboardWidgets:presetWidgets.Fabricator,quickActions,hasLoadedAppData:false,
-//selectProject:(id)=>{set({selectedProjectId:id}); setTimeout(()=>{get().loadDashboardLayout();get().saveAppData();},0);},
-selectProject:(id)=>{
-  set({ selectedProjectId:id });
-},
-activeProject:()=>get().projects.find(p=>p.id===get().selectedProjectId),
-addProject:(input)=>set(s=>{
-const id=nextId('p');
+    sessions: mock.sessions,
 
-persistSoon(get);
+    voiceNotes: mock.voiceNotes,
 
-return {
-selectedProjectId:id,
-projects:[
-{
-id,
-name:input.name,
-category:input.category,
-phase:input.phase,
-status:input.status,
-progress:0,
-hook:input.hook||'Keep momentum by capturing tasks, parts, photos, and shop activity.',
-budgetTarget:input.budgetTarget || 0,
-updatedAt:today()
-},
-...s.projects
-]
-}
-}),
-updateProject:(
-  id,
-  input:Partial<
-    ProjectInput & {
-      progress:number;
-      completedAt?:string;
-      archivedAt?:string;
-      coverPhotoId?:string;
-    }
-  >
-)=>set(s=>{
-  persistSoon(get);
+    tasks: mock.tasks,
 
-  return {
-    projects:s.projects.map(p =>
-      p.id===id
-        ? {
-            ...p,
-            ...input,
-            updatedAt:today(),
-          }
-        : p
-    )
-  };
-}),
-addVoiceNote:(transcript)=>set(s=>{persistSoon(get);return {voiceNotes:[{id:nextId('v'),projectId:s.selectedProjectId,transcript,createdAt:today()},...s.voiceNotes]}}),
-addTask:(title,system,createPart)=>set(s=>{
-persistSoon(get);
-const taskId=nextId('t');
-const timestamp=now();
-const newTask={id:taskId,projectId:s.selectedProjectId,title,system,status:'To Do' as const,createdAt:timestamp,updatedAt:timestamp};
-const shouldCreatePart=createPart;
-const newParts=shouldCreatePart?[{id:nextId('pa'),projectId:s.selectedProjectId,name:title,system,status:'Need to Order' as const,createdAt:timestamp,updatedAt:timestamp}]:[];
-return {
-tasks:[newTask,...s.tasks],
-parts:[...newParts,...s.parts]
-}
-}),
-addPart:(
-  name,
-  system,
-  vendor,
-  partNumber,
-  description,
-  estimatedCost,
-  actualCost
-)=>set(s=>{
-persistSoon(get);
-const partId=nextId('pa');
-const timestamp=now();
-return {
-parts:[{
-  id:partId,
-  projectId:s.selectedProjectId,
-  name,
-  system,
-  status:'Need to Order',
-  vendor,
-  partNumber,
-  description,
-  estimatedCost,
-  actualCost,
-  createdAt:timestamp,
-  updatedAt:timestamp
-},
-...s.parts,
-],
-}
-}),
-addPhoto:(caption,tag,uri)=>set(s=>{
-  persistSoon(get);
+    parts: mock.parts,
 
-  const photoId=nextId('ph');
-  const timestamp=now();
+    photos: mock.photos,
 
-  return {
-    photos:[
-      {
-        id:photoId,
-        projectId:s.selectedProjectId,
-        caption,
-        tag,
-        uri:uri||'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=900',
-        createdAt:timestamp
-      },
-      ...s.photos
-    ]
-  };
-}),
+    dashboardPreset: 'Fabricator',
 
-setProjectCoverPhoto:(photoId)=>set(s=>{
-  persistSoon(get);
+    dashboardWidgets: widgets,
 
-  return {
-    projects:s.projects.map(project =>
-      project.id===s.selectedProjectId
-        ? {
-            ...project,
-            coverPhotoId:photoId,
-            updatedAt:today(),
-          }
-        : project
-    )
-  };
-}),
+    quickActions,
 
-removeProjectCoverPhoto:()=>set(s=>{
-  persistSoon(get);
+    hasLoadedAppData: false,
 
-  return {
-    projects:s.projects.map(project =>
-      project.id===s.selectedProjectId
-        ? {
-            ...project,
-            coverPhotoId:undefined,
-            updatedAt:today(),
-          }
-        : project
-    )
-  };
-}),
-setPhotoMilestone:(photoId,title)=>set(s=>{
-  persistSoon(get);
+    selectProject: id => {
+      set({
+        selectedProjectId: id,
+      });
 
-  return {
-    photos:s.photos.map(photo =>
-      photo.id===photoId
-        ? {
-            ...photo,
-            isMilestone:true,
-            milestoneTitle:title,
-          }
-        : photo
-    )
-  };
-}),
+      persistSoon(get);
+    },
 
-removePhotoMilestone:(photoId)=>set(s=>{
-  persistSoon(get);
+    setProjectFilter: filter => {
+      set({
+        projectFilter: filter,
+      });
+    },
 
-  return {
-    photos:s.photos.map(photo =>
-      photo.id===photoId
-        ? {
-            ...photo,
-            isMilestone:false,
-            milestoneTitle:undefined,
-          }
-        : photo
-    )
-  };
-}),
-cycleTask:(id)=>set(s=>{persistSoon(get);return {tasks:s.tasks.map(t=>t.id===id?{...t,status:t.status==='To Do'?'In Progress':t.status==='In Progress'?'Done':'To Do',updatedAt:now()}:t)}}),
-cyclePart:(id)=>set(s=>{persistSoon(get);return {parts:s.parts.map(p=>p.id===id?{...p,status:p.status==='Need to Order'?'On Hand':p.status==='On Hand'?'Installed':'Need to Order',updatedAt:now()}:p)}}),
-toggleWidget:(id)=>set(s=>{persistLayoutSoon(get);return {dashboardWidgets:s.dashboardWidgets.map(w=>w.id===id?{...w,enabled:!w.enabled}:w)}}),
-toggleWidgetSize:(id)=>set(s=>{persistLayoutSoon(get);return {dashboardWidgets:s.dashboardWidgets.map(w=>w.id===id?{...w,size:w.size==='compact'?'expanded':'compact'}:w)}}),
-moveWidget:(id,direction)=>set(s=>{persistLayoutSoon(get);return {dashboardWidgets:reorder(s.dashboardWidgets,id,direction)}}),
-applyDashboardPreset:(preset)=>{set({dashboardPreset:preset,dashboardWidgets:presetWidgets[preset]});persistLayoutSoon(get);},
-toggleQuickAction:(id)=>set(s=>{persistLayoutSoon(get);return {quickActions:s.quickActions.map(a=>a.id===id?{...a,enabled:!a.enabled}:a)}}),
-saveDashboardLayout:async()=>{const s=get(); await dashboardLayoutStorage.save(storageKey(s.selectedProjectId),currentLayout(s));},
-//loadDashboardLayout:async()=>{const s=get(); const saved=await dashboardLayoutStorage.load(storageKey(s.selectedProjectId)); if(saved){set({dashboardPreset:saved.preset,dashboardWidgets:migrateWidgets(saved.widgets),quickActions:migrateQuickActions(saved.quickActions)});}},
-loadDashboardLayout:async()=>{},
-saveAppData:async()=>{await appDataStorage.save(currentData(get()));},
-loadAppData:async()=>{const saved=await appDataStorage.load(); if(saved){set({...saved,hasLoadedAppData:true});}else{set({hasLoadedAppData:true});}},
-resetDemoData:async()=>{await appDataStorage.clear();set({selectedProjectId:'p1',projects:mock.projects,sessions:mock.sessions,voiceNotes:mock.voiceNotes,tasks:mock.tasks,parts:mock.parts,photos:mock.photos});}
-}));
+    activeProject: () =>
+      get().projects.find(
+        p =>
+          p.id ===
+          get().selectedProjectId
+      ),
+
+    addProject: input =>
+      set(state => {
+        const id = nextId('p');
+
+        persistSoon(get);
+
+        return {
+          selectedProjectId: id,
+
+          projects: [
+            {
+              id,
+
+              name: input.name,
+
+              category: input.category,
+
+              phase: input.phase,
+
+              status: input.status,
+
+              progress: 0,
+
+              hook:
+                input.hook ||
+                'Keep momentum in the shop.',
+
+              budgetTarget:
+                input.budgetTarget || 0,
+
+              updatedAt: today(),
+            },
+
+            ...state.projects,
+          ],
+        };
+      }),
+
+    updateProject: (
+      id,
+      updates
+    ) =>
+      set(state => {
+        persistSoon(get);
+
+        return {
+          projects:
+            state.projects.map(
+              project =>
+                project.id === id
+                  ? {
+                      ...project,
+                      ...updates,
+                      updatedAt: today(),
+                    }
+                  : project
+            ),
+        };
+      }),
+
+    completeProject: id =>
+      set(state => {
+        persistSoon(get);
+
+        return {
+          projects:
+            state.projects.map(
+              project =>
+                project.id === id
+                  ? {
+                      ...project,
+                      status:
+                        'completed',
+                      completedAt:
+                        now(),
+                      updatedAt:
+                        today(),
+                    }
+                  : project
+            ),
+        };
+      }),
+
+    archiveProject: id =>
+      set(state => {
+        persistSoon(get);
+
+        return {
+          projects:
+            state.projects.map(
+              project =>
+                project.id === id
+                  ? {
+                      ...project,
+                      status:
+                        'archived',
+                      archivedAt:
+                        now(),
+                      updatedAt:
+                        today(),
+                    }
+                  : project
+            ),
+        };
+      }),
+
+    reopenProject: id =>
+      set(state => {
+        persistSoon(get);
+
+        return {
+          projects:
+            state.projects.map(
+              project =>
+                project.id === id
+                  ? {
+                      ...project,
+                      status: 'active',
+                      completedAt:
+                        undefined,
+                      archivedAt:
+                        undefined,
+                      updatedAt:
+                        today(),
+                    }
+                  : project
+            ),
+        };
+      }),
+
+    addTask: (
+      title,
+      system,
+      createPart
+    ) =>
+      set(state => {
+        persistSoon(get);
+
+        const timestamp =
+          now();
+
+        const newParts =
+          createPart
+            ? [
+                {
+                  id: nextId('pa'),
+
+                  projectId:
+                    state.selectedProjectId,
+
+                  name: title,
+
+                  system,
+
+                  status:
+                    'Need to Order' as const,
+
+                  createdAt:
+                    timestamp,
+
+                  updatedAt:
+                    timestamp,
+                },
+              ]
+            : [];
+
+        return {
+          tasks: [
+            {
+              id: nextId('t'),
+
+              projectId:
+                state.selectedProjectId,
+
+              title,
+
+              system,
+
+              status:
+                'To Do' as const,
+
+              createdAt:
+                timestamp,
+
+              updatedAt:
+                timestamp,
+            },
+
+            ...state.tasks,
+          ],
+
+          parts: [
+            ...newParts,
+            ...state.parts,
+          ],
+        };
+      }),
+
+    updateTask: (
+      id,
+      updates
+    ) =>
+      set(state => {
+        persistSoon(get);
+
+        return {
+          tasks: state.tasks.map(
+            task =>
+              task.id === id
+                ? {
+                    ...task,
+                    ...updates,
+                    updatedAt:
+                      now(),
+                  }
+                : task
+          ),
+        };
+      }),
+
+    deleteTask: id =>
+      set(state => {
+        persistSoon(get);
+
+        return {
+          tasks: state.tasks.filter(
+            task => task.id !== id
+          ),
+        };
+      }),
+
+    cycleTask: id =>
+      set(state => {
+        persistSoon(get);
+
+        return {
+          tasks: state.tasks.map(
+            task =>
+              task.id === id
+                ? {
+                    ...task,
+
+                    status:
+                      task.status ===
+                      'To Do'
+                        ? 'In Progress'
+                        : task.status ===
+                          'In Progress'
+                        ? 'Completed'
+                        : 'To Do',
+
+                    updatedAt: now(),
+                  }
+                : task
+          ),
+        };
+      }),
+
+    addPart: (
+      name,
+      system,
+      vendor,
+      partNumber,
+      description,
+      estimatedCost,
+      actualCost
+    ) =>
+      set(state => {
+        persistSoon(get);
+
+        const timestamp =
+          now();
+
+        return {
+          parts: [
+            {
+              id: nextId('pa'),
+
+              projectId:
+                state.selectedProjectId,
+
+              name,
+
+              system,
+
+              status:
+                'Need to Order' as const,
+
+              vendor,
+
+              partNumber,
+
+              description,
+
+              estimatedCost,
+
+              actualCost,
+
+              createdAt:
+                timestamp,
+
+              updatedAt:
+                timestamp,
+            },
+
+            ...state.parts,
+          ],
+        };
+      }),
+
+    updatePart: (
+      id,
+      updates
+    ) =>
+      set(state => {
+        persistSoon(get);
+
+        return {
+          parts: state.parts.map(
+            part =>
+              part.id === id
+                ? {
+                    ...part,
+                    ...updates,
+                    updatedAt:
+                      now(),
+                  }
+                : part
+          ),
+        };
+      }),
+
+    deletePart: id =>
+      set(state => {
+        persistSoon(get);
+
+        return {
+          parts:
+            state.parts.filter(
+              part =>
+                part.id !== id
+            ),
+        };
+      }),
+
+    cyclePart: id =>
+      set(state => {
+        persistSoon(get);
+
+        return {
+          parts: state.parts.map(
+            part =>
+              part.id === id
+                ? {
+                    ...part,
+
+                    status:
+                      part.status ===
+                      'Need to Order'
+                        ? 'On Hand'
+                        : part.status ===
+                          'On Hand'
+                        ? 'Installed'
+                        : 'Need to Order',
+
+                    updatedAt:
+                      now(),
+                  }
+                : part
+          ),
+        };
+      }),
+
+    toggleWidget: id =>
+      set(state => ({
+        dashboardWidgets:
+          state.dashboardWidgets.map(
+            widget =>
+              widget.id === id
+                ? {
+                    ...widget,
+                    enabled:
+                      !widget.enabled,
+                  }
+                : widget
+          ),
+      })),
+
+    toggleWidgetSize: id =>
+      set(state => ({
+        dashboardWidgets:
+          state.dashboardWidgets.map(
+            widget =>
+              widget.id === id
+                ? {
+                    ...widget,
+
+                    size:
+                      widget.size ===
+                      'compact'
+                        ? 'expanded'
+                        : 'compact',
+                  }
+                : widget
+          ),
+      })),
+
+    moveWidget: (
+      id,
+      direction
+    ) =>
+      set(state => {
+        const widgets = [
+          ...state.dashboardWidgets,
+        ];
+
+        const index =
+          widgets.findIndex(
+            w => w.id === id
+          );
+
+        if (index < 0) {
+          return state;
+        }
+
+        const target =
+          direction === 'up'
+            ? index - 1
+            : index + 1;
+
+        if (
+          target < 0 ||
+          target >= widgets.length
+        ) {
+          return state;
+        }
+
+        [
+          widgets[index],
+          widgets[target],
+        ] = [
+          widgets[target],
+          widgets[index],
+        ];
+
+        return {
+          dashboardWidgets:
+            widgets,
+        };
+      }),
+
+    addPhoto: (
+      caption,
+      tag,
+      uri
+    ) =>
+      set(state => {
+        persistSoon(get);
+
+        return {
+          photos: [
+            {
+              id: nextId('ph'),
+
+              projectId:
+                state.selectedProjectId,
+
+              caption,
+
+              tag,
+
+              uri:
+                uri ||
+                'https://images.unsplash.com/photo-1504917595217-d4dc5ebe6122?w=900',
+
+              createdAt:
+                now(),
+            },
+
+            ...state.photos,
+          ],
+        };
+      }),
+
+    setPhotoMilestone: (
+      photoId,
+      title
+    ) =>
+      set(state => ({
+        photos: state.photos.map(
+          photo =>
+            photo.id === photoId
+              ? {
+                  ...photo,
+
+                  isMilestone:
+                    true,
+
+                  milestoneTitle:
+                    title,
+                }
+              : photo
+        ),
+      })),
+
+    removePhotoMilestone:
+      photoId =>
+        set(state => ({
+          photos:
+            state.photos.map(
+              photo =>
+                photo.id ===
+                photoId
+                  ? {
+                      ...photo,
+
+                      isMilestone:
+                        false,
+
+                      milestoneTitle:
+                        undefined,
+                    }
+                  : photo
+            ),
+        })),
+
+    setProjectCoverPhoto:
+      photoId =>
+        set(state => ({
+          projects:
+            state.projects.map(
+              project =>
+                project.id ===
+                state.selectedProjectId
+                  ? {
+                      ...project,
+
+                      coverPhotoId:
+                        photoId,
+                    }
+                  : project
+            ),
+        })),
+
+    addVoiceNote: transcript =>
+      set(state => {
+        persistSoon(get);
+
+        return {
+          voiceNotes: [
+            {
+              id: nextId('v'),
+
+              projectId:
+                state.selectedProjectId,
+
+              transcript,
+
+              createdAt: now(),
+            },
+
+            ...state.voiceNotes,
+          ],
+        };
+      }),
+
+    saveAppData: async () => {
+      const state = get();
+
+      const data: PersistedData =
+        {
+          selectedProjectId:
+            state.selectedProjectId,
+
+          projects:
+            state.projects,
+
+          sessions:
+            state.sessions,
+
+          voiceNotes:
+            state.voiceNotes,
+
+          tasks: state.tasks,
+
+          parts: state.parts,
+
+          photos: state.photos,
+        };
+
+      await appDataStorage.save(
+        data
+      );
+    },
+
+    loadAppData: async () => {
+      const saved =
+        await appDataStorage.load();
+
+      if (saved) {
+        set({
+          ...saved,
+          hasLoadedAppData: true,
+        });
+      } else {
+        set({
+          hasLoadedAppData: true,
+        });
+      }
+    },
+  }));

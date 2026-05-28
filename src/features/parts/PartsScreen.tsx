@@ -69,13 +69,7 @@ function getSystems(category?: string) {
   }
 }
 
-const statuses = [
-  'To Buy',
-  'On Shelf',
-  'Installed',
-] as const;
-
-function buildSearchQuery(part: any) {
+const statuses = [ 'To Buy', 'On Shelf', 'Installed', ] as const; type VisibleStatus = | 'To Buy' | 'On Shelf' | 'Installed'; function buildSearchQuery(part: any) {
   return [
     part.name,
     part.partNumber,
@@ -198,27 +192,7 @@ const systems = getSystems(project?.category);
     p => p.projectId === store.selectedProjectId
   );
 
-  const grouped = useMemo(
-    () => ({
-      'To Buy': parts.filter(
-        p => p.status === 'Need to Order'
-      ),
-
-      'On Shelf': parts.filter(
-        p =>
-          p.status === 'On Hand' ||
-          p.status === 'Ordered'
-      ),
-
-      Installed: parts.filter(
-        p => p.status === 'Installed'
-      ),
-    }),
-    [parts]
-  );
-
-  const visibleParts =
-    grouped[activeStatus] || [];
+  const grouped: Record< VisibleStatus, typeof parts > = useMemo( () => ({ 'To Buy': parts.filter( p => p.status === 'Need to Order' ), 'On Shelf': parts.filter( p => p.status === 'On Hand' || p.status === 'Ordered' ), Installed: parts.filter( p => p.status === 'Installed' ), }), [parts] ); const visibleParts = grouped[ activeStatus as VisibleStatus ] || [];
 
   const totalEstimated = parts.reduce(
     (sum, part) =>

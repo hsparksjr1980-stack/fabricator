@@ -1,111 +1,182 @@
-export type ProjectCategory = 'Vehicle Build' | 'Fabrication' | 'Woodworking' | 'Restoration' | 'Creator Build' | 'Metal Fabrication' | 'Blacksmithing';
-export type ProjectPhase = 'Planning' | 'Teardown' | 'Fabrication' | 'Mockup' | 'Assembly' | 'Finishing' | 'Complete';
-export type ProjectStatus = 'Active' | 'Paused' | 'Completed' | 'Archived' | 'Blocked' | 'Done' | 'In Progress';
-export type TaskStatus = 'To Do' | 'In Progress' | 'Done';
-export type PartStatus = 'Installed' | 'On Hand' | 'Need to Order' | 'Ordered';
 
-export type DashboardWidgetType = 'focus' | 'quickActions' | 'progress' | 'stats' | 'nextSession' | 'blockers' | 'parts' | 'materialsInventory' | 'recentActivity' | 'photoFeature' | 'creator';
-export type DashboardWidgetSize = 'compact' | 'expanded';
-export type DashboardPreset = 'Fabricator' | 'Woodworker' | 'Restoration' | 'Content Creator' | 'Race Build' | 'Motorcycle Build';
-export type QuickActionType = 'voice' | 'task' | 'part' | 'photo' | 'render';
+export type ProjectStatus =
+  | 'active'
+  | 'completed'
+  | 'archived';
 
-export interface DashboardWidget { id:string; type:DashboardWidgetType; title:string; enabled:boolean; size:DashboardWidgetSize; }
-export interface QuickAction { id:string; type:QuickActionType; title:string; enabled:boolean; }
+export type TaskStatus =
+  | 'To Do'
+  | 'In Progress'
+  | 'Completed'
+  | 'Done';
+
+export type PartStatus =
+  | 'Need to Order'
+  | 'On Hand'
+  | 'Installed'
+  | 'Ordered';
+
+export type ProjectCategory = string;
+
+export type ProjectPhase = string;
 
 export interface Project {
- id: string;
- name: string;
- category: ProjectCategory;
- phase: ProjectPhase;
- status: ProjectStatus;
- progress: number;
- hook: string;
- updatedAt: string;
- completedAt?: string;
- archivedAt?: string;
+  id: string;
 
- // Budgeting
- budgetTarget?: number;
+  name: string;
 
- // Stage 1
- coverPhotoId?: string;
-}
+  category: ProjectCategory;
 
-export interface GarageSession {
- id: string;
- projectId: string;
- title: string;
- notes: string;
- durationMinutes: number;
- createdAt: string;
- sessionDate?: string;
- linkedPhotoIds?: string[];
- linkedTaskIds?: string[];
- linkedPartIds?: string[];
-}
+  phase: ProjectPhase;
 
-export interface VoiceNote {
- id: string;
- projectId: string;
- transcript: string;
- createdAt: string;
+  status: ProjectStatus;
+
+  progress: number;
+
+  hook?: string;
+
+  budgetTarget?: number;
+
+  description?: string;
+
+  completedAt?: string;
+
+  archivedAt?: string;
+
+  isOnHold?: boolean;
+
+  coverPhotoId?: string;
+
+  updatedAt: string;
 }
 
 export interface BuildTask {
- id: string;
- projectId: string;
- title: string;
- system: string;
- status: TaskStatus;
- createdAt?: string;
- updatedAt?: string;
+  id: string;
+
+  projectId: string;
+
+  title: string;
+
+  system: string;
+
+  notes?: string;
+
+  priority?: 'Low' | 'Medium' | 'High';
+
+  status: TaskStatus;
+
+  createdAt: string;
+
+  updatedAt: string;
 }
 
 export interface Part {
- id: string;
- projectId: string;
- name: string;
- system: string;
- status: PartStatus;
- vendor?: string;
- estimatedCost?: number;
- actualCost?: number;
- partNumber?: string;
- description?: string;
- notes?: string;
- orderedAt?: string;
- createdAt?: string;
- updatedAt?: string;
+  id: string;
+
+  projectId: string;
+
+  name: string;
+
+  system: string;
+
+  status: PartStatus;
+
+  vendor?: string;
+
+  quantity?: number;
+
+  tags?: string[];
+
+  notes?: string;
+
+  partNumber?: string;
+
+  description?: string;
+
+  estimatedCost?: number;
+
+  actualCost?: number;
+
+  createdAt: string;
+
+  updatedAt: string;
+}
+
+export interface VoiceNote {
+  id: string;
+
+  projectId: string;
+
+  transcript: string;
+
+  createdAt: string;
 }
 
 export interface BuildPhoto {
- id: string;
- projectId: string;
- uri: string;
- tag: string;
- caption: string;
- createdAt: string;
- sessionId?: string;
+  id: string;
 
- // Milestones
- isMilestone?: boolean;
- milestoneTitle?: string;
+  projectId: string;
 
- // Future before/after comparison support
- comparisonGroup?: string;
+  caption: string;
+
+  tag: string;
+
+  uri: string;
+
+  createdAt: string;
+
+  isMilestone?: boolean;
+
+  milestoneTitle?: string;
 }
 
-export interface AiSummary {
- completedWork: string[];
- remainingWork: string[];
- nextSessionChecklist: string[];
- partsNeeded: string[];
+export interface GarageSession { id: string; projectId: string; title: string; durationMinutes?: number; notes?: string; createdAt: string;
 }
 
-export type TimelineItem = {
- id: string;
- kind: 'task'|'part'|'photo';
- title: string;
- meta: string;
- date: string;
-};
+export type DashboardPreset =
+  | 'Fabricator'
+  | 'Woodworker'
+  | 'Restoration'
+  | 'Content Creator'
+  | 'Race Build'
+  | 'Motorcycle Build';
+
+export interface DashboardWidget {
+  id: string;
+
+  type:
+    | 'focus' 
+    | 'quickActions' 
+    | 'progress' 
+    | 'stats' 
+    | 'nextSession' 
+    | 'blockers' 
+    | 'parts' 
+    | 'materialsInventory' 
+    | 'recentActivity' 
+    | 'photoFeature' 
+    | 'creator' 
+    | 'sessionTimer'
+    | 'timer' | 'activity' | 'render';
+
+  title: string;
+
+  enabled: boolean;
+
+  size: 'compact' | 'expanded';
+}
+
+export interface QuickAction {
+  id: string;
+
+  type:
+    | 'task'
+    | 'part'
+    | 'photo'
+    | 'render';
+
+  title: string;
+
+  enabled: boolean;
+}
+
