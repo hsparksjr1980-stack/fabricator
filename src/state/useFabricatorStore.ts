@@ -30,6 +30,7 @@ type ProjectInput = {
 
 type PersistedData = {
   selectedProjectId: string;
+  projectFilter?: ProjectStatus;
   projects: Project[];
   sessions: GarageSession[];
   voiceNotes: VoiceNote[];
@@ -97,6 +98,10 @@ type Store = {
   ) => void;
 
   reopenProject: (
+    id: string
+  ) => void;
+
+  deleteProject: (
     id: string
   ) => void;
 
@@ -193,6 +198,16 @@ const nextId = (
   prefix: string
 ) => `${prefix}-${Date.now()}`;
 
+const normalizeProjectStatus = (
+  status: unknown
+): ProjectStatus => {
+  if (status === 'completed' || status === 'archived') {
+    return status;
+  }
+
+  return 'active';
+};
+
 let persistTimeout:
   | ReturnType<typeof setTimeout>
   | null = null;
@@ -278,6 +293,8 @@ export const useFabricatorStore =
       set({
         projectFilter: filter,
       });
+
+      persistSoon(get);
     },
 
     activeProject: () =>
@@ -306,7 +323,10 @@ export const useFabricatorStore =
 
               phase: input.phase,
 
-              status: input.status,
+              status:
+                normalizeProjectStatus(
+                  input.status
+                ),
 
               progress: 0,
 
@@ -340,6 +360,12 @@ export const useFabricatorStore =
                   ? {
                       ...project,
                       ...updates,
+                      status:
+                        updates.status
+                          ? normalizeProjectStatus(
+                              updates.status
+                            )
+                          : project.status,
                       updatedAt: today(),
                     }
                   : project
@@ -362,6 +388,12 @@ export const useFabricatorStore =
                         'completed',
                       completedAt:
                         now(),
+                      archivedAt:
+                        undefined,
+                      progress:
+                        100,
+                      phase:
+                        'Complete',
                       updatedAt:
                         today(),
                     }
@@ -413,6 +445,72 @@ export const useFabricatorStore =
                         today(),
                     }
                   : project
+            ),
+        };
+      }),
+
+    deleteProject: id =>
+      set(state => {
+        persistSoon(get);
+
+        const remainingProjects =
+          state.projects.filter(
+            project => project.id !== id
+          );
+
+        const selectedProjectExists =
+          remainingProjects.some(
+            project =>
+              project.id ===
+              state.selectedProjectId
+          );
+
+        const nextSelectedProject =
+          selectedProjectExists
+            ? state.selectedProjectId
+            : remainingProjects.find(
+                project =>
+                  project.status ===
+                  'active'
+              )?.id ||
+              remainingProjects[0]?.id ||
+              '';
+
+        return {
+          selectedProjectId:
+            nextSelectedProject,
+
+          projects:
+            remainingProjects,
+
+          sessions:
+            state.sessions.filter(
+              session =>
+                session.projectId !== id
+            ),
+
+          voiceNotes:
+            state.voiceNotes.filter(
+              note =>
+                note.projectId !== id
+            ),
+
+          tasks:
+            state.tasks.filter(
+              task =>
+                task.projectId !== id
+            ),
+
+          parts:
+            state.parts.filter(
+              part =>
+                part.projectId !== id
+            ),
+
+          photos:
+            state.photos.filter(
+              photo =>
+                photo.projectId !== id
             ),
         };
       }),
@@ -861,6 +959,9 @@ export const useFabricatorStore =
           selectedProjectId:
             state.selectedProjectId,
 
+          projectFilter:
+            state.projectFilter,
+
           projects:
             state.projects,
 
@@ -887,8 +988,42 @@ export const useFabricatorStore =
         await appDataStorage.load();
 
       if (saved) {
+        const savedProjects =
+          saved.projects.map(
+            project => ({
+              ...project,
+              status:
+                normalizeProjectStatus(
+                  project.status
+                ),
+            })
+          );
+
+        const selectedProjectExists =
+          savedProjects.some(
+            project =>
+              project.id ===
+              saved.selectedProjectId
+          );
+
         set({
           ...saved,
+          projectFilter:
+            normalizeProjectStatus(
+              saved.projectFilter
+            ),
+          projects:
+            savedProjects,
+          selectedProjectId:
+            selectedProjectExists
+              ? saved.selectedProjectId
+              : savedProjects.find(
+                  project =>
+                    project.status ===
+                    'active'
+                )?.id ||
+                savedProjects[0]?.id ||
+                '',
           hasLoadedAppData: true,
         });
       } else {

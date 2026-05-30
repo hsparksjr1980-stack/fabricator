@@ -1,9 +1,11 @@
 import React from 'react';
 import { Modal, View, Pressable } from 'react-native';
 import { AppText } from '@/components/Text';
+import { ProjectStatus } from '@/types/models';
 
 type Props = {
   visible: boolean;
+  projectStatus?: ProjectStatus;
   onClose: () => void;
   onComplete: () => void;
   onArchive: () => void;
@@ -12,6 +14,7 @@ type Props = {
 
 export function ProjectManagementModal({
   visible,
+  projectStatus,
   onClose,
   onComplete,
   onArchive,
@@ -49,17 +52,23 @@ export function ProjectManagementModal({
             Project Management
           </AppText>
 
-          <Pressable onPress={onComplete}>
-            <AppText>Complete Project</AppText>
-          </Pressable>
+          {projectStatus === 'active' ? (
+            <Pressable onPress={onComplete}>
+              <AppText>Complete Project</AppText>
+            </Pressable>
+          ) : null}
 
-          <Pressable onPress={onArchive}>
-            <AppText>Archive Project</AppText>
-          </Pressable>
+          {projectStatus === 'completed' ? (
+            <Pressable onPress={onArchive}>
+              <AppText>Archive Project</AppText>
+            </Pressable>
+          ) : null}
 
-          <Pressable onPress={onReopen}>
-            <AppText>Reopen Project</AppText>
-          </Pressable>
+          {projectStatus === 'archived' ? (
+            <Pressable onPress={onReopen}>
+              <AppText>Reopen Project</AppText>
+            </Pressable>
+          ) : null}
 
           <Pressable onPress={onClose}>
             <AppText>Close</AppText>

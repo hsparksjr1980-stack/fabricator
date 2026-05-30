@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Pressable, TextInput, View } from 'react-native';
+import { Alert, Pressable, TextInput, View } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
@@ -18,7 +18,6 @@ export function ProjectEditScreen({ navigation }: NativeStackScreenProps<any>) {
   String(project?.budgetTarget || '')
     );
   const [phase, setPhase] = useState<string>(project?.phase ?? 'Planning');
-  const [status, setStatus] = useState<string>(project?.status ?? 'Active');
   const [progress, setProgress] = useState(String(project?.progress ?? 0));
   const [hook, setHook] = useState(project?.hook ?? '');
 
@@ -38,7 +37,6 @@ export function ProjectEditScreen({ navigation }: NativeStackScreenProps<any>) {
       budgetTarget: budgetTarget
       ? Number(budgetTarget)
       : 0,
-      status: status as any,
       progress: Number(progress) || 0,
       hook,
     });
@@ -47,24 +45,75 @@ export function ProjectEditScreen({ navigation }: NativeStackScreenProps<any>) {
   };
 
   const markComplete = () => {
-    store.updateProject(project.id, {
-      status: 'completed',
-      phase: 'Complete',
-      progress: 100,
-    });
+    Alert.alert(
+      'Complete project?',
+      'This moves the project to Completed. It stays viewable and can still be archived later.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Complete Project',
+          onPress: () => {
+            store.completeProject(project.id);
+            setPhase('Complete');
+            setProgress('100');
+          },
+        },
+      ]
+    );
+  };
 
-    setStatus('Completed');
-    setPhase('Complete');
-    setProgress('100');
+  const archiveProject = () => {
+    Alert.alert(
+      'Archive project?',
+      'This moves the project to Archived. It remains viewable and can be reopened later.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Archive Project',
+          onPress: () => store.archiveProject(project.id),
+        },
+      ]
+    );
   };
 
   const reopenProject = () => {
-    store.updateProject(project.id, {
-      status: 'active',
-    });
-
-    setStatus('Active');
+    Alert.alert(
+      'Reopen project?',
+      'This returns the project to Active and clears completed/archive timestamps.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Reopen Project',
+          onPress: () => store.reopenProject(project.id),
+        },
+      ]
+    );
   };
+
+  const deleteProject = () => {
+    Alert.alert(
+      'Delete project?',
+      'This permanently removes the project and all related tasks, parts, notes, garage sessions, photos, and timeline items.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Project',
+          style: 'destructive',
+          onPress: () => {
+            store.deleteProject(project.id);
+            navigation.navigate('Welcome');
+          },
+        },
+      ]
+    );
+  };
+
+  const statusLabel =
+    project.status === 'active'
+      ? 'Active'
+      : project.status === 'completed'
+      ? 'Completed'
+      : 'Archived';
 
   return (
     <Screen>
@@ -111,13 +160,13 @@ export function ProjectEditScreen({ navigation }: NativeStackScreenProps<any>) {
           style={inputStyle}
         />
 
-        <TextInput
-          value={status}
-          onChangeText={text => setStatus(text)}
-          placeholder="Status"
-          placeholderTextColor={colors.steel}
-          style={inputStyle}
-        />
+        <View style={styles.statusSummary}>
+          <Label>STATUS</Label>
+
+          <AppText style={styles.statusValue}>
+            {statusLabel}
+          </AppText>
+        </View>
 
         <TextInput
           value={progress}
@@ -156,25 +205,56 @@ export function ProjectEditScreen({ navigation }: NativeStackScreenProps<any>) {
           remaining fully accessible for documentation and history tracking.
         </AppText>
 
-        {project.status !== 'completed' ? (
+        {project.status === 'active' ? (
           <Pressable style={styles.completeButton} onPress={markComplete}>
             <AppText style={styles.completeButtonText}>
-              Mark Project Complete
+              Complete Project
             </AppText>
           </Pressable>
-        ) : (
+        ) : null}
+
+        {project.status === 'completed' ? (
+          <Pressable style={styles.archiveButton} onPress={archiveProject}>
+            <AppText style={styles.archiveButtonText}>
+              Archive Project
+            </AppText>
+          </Pressable>
+        ) : null}
+
+        {project.status === 'archived' ? (
           <Pressable style={styles.reopenButton} onPress={reopenProject}>
             <AppText style={styles.reopenButtonText}>
               Reopen Project
             </AppText>
           </Pressable>
-        )}
+        ) : null}
 
         {project.completedAt ? (
           <AppText style={styles.completedDate}>
             Completed: {new Date(project.completedAt).toLocaleDateString()}
           </AppText>
         ) : null}
+
+        {project.archivedAt ? (
+          <AppText style={styles.completedDate}>
+            Archived: {new Date(project.archivedAt).toLocaleDateString()}
+          </AppText>
+        ) : null}
+      </Card>
+
+      <Card style={{ marginTop: 18 }}>
+        <Label>DANGER ZONE</Label>
+
+        <AppText style={styles.lifecycleText}>
+          Delete removes this project and all related tasks, parts, notes,
+          garage sessions, photos, and timeline items.
+        </AppText>
+
+        <Pressable style={styles.deleteButton} onPress={deleteProject}>
+          <AppText style={styles.deleteButtonText}>
+            Delete Project
+          </AppText>
+        </Pressable>
       </Card>
     </Screen>
   );
@@ -196,6 +276,22 @@ const styles = {
     marginBottom: 18,
     color: colors.steel,
     lineHeight: 22,
+  },
+
+  statusSummary: {
+    backgroundColor: colors.graphite,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    padding: spacing.md,
+    marginBottom: 14,
+  },
+
+  statusValue: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '900' as const,
+    marginTop: 6,
   },
 
   completeButton: {
@@ -222,6 +318,38 @@ const styles = {
     paddingVertical: 16,
     alignItems: 'center' as const,
     justifyContent: 'center' as const,
+  },
+
+  archiveButton: {
+    backgroundColor: '#241F19',
+    borderWidth: 1,
+    borderColor: '#6B5A44',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+
+  archiveButtonText: {
+    color: '#B9A58A',
+    fontWeight: '900' as const,
+    fontSize: 16,
+  },
+
+  deleteButton: {
+    backgroundColor: '#351311',
+    borderWidth: 1,
+    borderColor: '#B8423A',
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
+  },
+
+  deleteButtonText: {
+    color: '#FF8A80',
+    fontWeight: '900' as const,
+    fontSize: 16,
   },
 
   reopenButtonText: {

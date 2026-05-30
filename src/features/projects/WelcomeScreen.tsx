@@ -16,6 +16,7 @@ import { AppText, Label, Title } from '@/components/Text';
 import { StatusPill } from '@/components/StatusPill';
 import { useFabricatorStore } from '@/state/useFabricatorStore';
 import { colors, radius, spacing } from '@/theme/theme';
+import { ProjectStatus } from '@/types/models';
 
 const projectImages = [
   'https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=1200&auto=format&fit=crop',
@@ -25,7 +26,14 @@ const projectImages = [
 ];
 
 export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
-  const { projects, selectProject, addProject, photos } = useFabricatorStore();
+  const {
+    projects,
+    selectProject,
+    addProject,
+    photos,
+    projectFilter,
+    setProjectFilter,
+  } = useFabricatorStore();
 
   const [showCreate, setShowCreate] = useState(false);
   const [search, setSearch] = useState('');
@@ -38,19 +46,21 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
     if (!search.trim()) return projects;
 
     return projects.filter(project => {
-      const value = `${project.name} ${project.category} ${project.phase}`.toLowerCase();
+      const value = `${project.name} ${project.category} ${project.phase} ${project.status}`.toLowerCase();
 
       return value.includes(search.toLowerCase());
     });
   }, [projects, search]);
 
-  const activeProjectList = filteredProjects.filter(
-    project => project.status !== 'completed'
+  const visibleProjectList = filteredProjects.filter(
+    project => project.status === projectFilter
   );
 
-  const completedProjectList = filteredProjects.filter(
-    project => project.status === 'completed'
-  );
+  const statusLabels: Record<ProjectStatus, string> = {
+    active: 'Active',
+    completed: 'Completed',
+    archived: 'Archived',
+  };
 
   const activeProjects = projects.filter(
     project => project.status === 'active'
@@ -60,25 +70,29 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
     project => project.status === 'completed'
   ).length;
 
+  const archivedProjects = projects.filter(
+    project => project.status === 'archived'
+  ).length;
+
   const createProject = () => {
     if (!projectName.trim()) return;
 
     addProject({
-  name: projectName.trim(),
-  category: category as any,
-  phase: phase as any,
-  status: 'Active',
-  budgetTarget: budgetTarget
-    ? Number(budgetTarget)
-    : 0,
-} as any);
+      name: projectName.trim(),
+      category: category as any,
+      phase: phase as any,
+      status: 'active',
+      budgetTarget: budgetTarget
+        ? Number(budgetTarget)
+        : 0,
+    });
 
-  setProjectName('');
-  setCategory('Metal Fabrication');
-  setPhase('Planning');
-  setBudgetTarget('');
-  setShowCreate(false);
-};
+    setProjectName('');
+    setCategory('Metal Fabrication');
+    setPhase('Planning');
+    setBudgetTarget('');
+    setShowCreate(false);
+  };
 
 
   const openProject = (projectId: string) => {
@@ -169,6 +183,21 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
             <AppText style={styles.statSub}>Finished Builds</AppText>
           </View>
 
+          <View style={styles.statCardArchived}>
+            <MaterialCommunityIcons
+              name="archive-outline"
+              size={24}
+              color="#B9A58A"
+            />
+
+            <Title style={styles.archivedStatValue}>
+              {archivedProjects}
+            </Title>
+
+            <AppText style={styles.statLabel}>Archived</AppText>
+            <AppText style={styles.statSub}>Stored Builds</AppText>
+          </View>
+
           <View style={styles.statCard}>
             <MaterialCommunityIcons
               name="camera-outline"
@@ -181,6 +210,37 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
             <AppText style={styles.statLabel}>Photos</AppText>
             <AppText style={styles.statSub}>Across Projects</AppText>
           </View>
+        </View>
+
+        <View style={styles.statusFilterRow}>
+          {(['active', 'completed', 'archived'] as ProjectStatus[]).map(
+            status => {
+              const selected =
+                projectFilter === status;
+
+              return (
+                <Pressable
+                  key={status}
+                  style={[
+                    styles.statusFilterButton,
+                    selected &&
+                      styles.statusFilterButtonActive,
+                  ]}
+                  onPress={() => setProjectFilter(status)}
+                >
+                  <AppText
+                    style={[
+                      styles.statusFilterText,
+                      selected &&
+                        styles.statusFilterTextActive,
+                    ]}
+                  >
+                    {statusLabels[status]}
+                  </AppText>
+                </Pressable>
+              );
+            }
+          )}
         </View>
 
         <View style={styles.searchRow}>
@@ -258,19 +318,27 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
         ) : null}
 
         <View style={styles.sectionHeader}>
-          <Label>ACTIVE PROJECTS</Label>
+          <Label>{statusLabels[projectFilter].toUpperCase()} PROJECTS</Label>
 
           <AppText style={styles.viewAllText}>
-            {activeProjectList.length} builds
+            {visibleProjectList.length} builds
           </AppText>
         </View>
 
-        {activeProjectList.map((project, index) => (
+        {visibleProjectList.map((project, index) => (
           <Pressable
   key={project.id}
   onPress={() => openProject(project.id)}
 >
-  <View style={styles.projectRow}>
+  <View
+    style={
+      project.status === 'completed'
+        ? styles.completedProjectRow
+        : project.status === 'archived'
+        ? styles.archivedProjectRow
+        : styles.projectRow
+    }
+  >
     <Image
       source={{
         uri:
@@ -297,11 +365,15 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
 
       <View style={styles.pillRow}>
         <StatusPill label={project.phase} />
-        <StatusPill label={project.status} />
+        <StatusPill label={statusLabels[project.status]} />
       </View>
 
       <AppText style={styles.updateText}>
-        Updated recently
+        {project.status === 'archived'
+          ? 'Archived for reference'
+          : project.status === 'completed'
+          ? 'Completed build record'
+          : 'Updated recently'}
       </AppText>
 
       <View style={styles.progressRow}>
@@ -322,70 +394,6 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
   </View>
 </Pressable>
         ))}
-
-        {completedProjectList.length ? (
-          <>
-            <View style={[styles.sectionHeader, { marginTop: 20 }]}>
-              <Label>COMPLETED BUILDS</Label>
-
-              <AppText style={styles.completedLabel}>
-                Archived Showcase
-              </AppText>
-            </View>
-
-            {completedProjectList.map((project, index) => (
-              <Pressable
-              key={project.id}
-                    onPress={() => openProject(project.id)}
->
-              <View style={styles.completedProjectRow}>
-              <Image
-                  source={{
-                    uri:
-                      photos.find(
-                        photo => photo.id === project.coverPhotoId
-                      )?.uri ||
-                      projectImages[index % projectImages.length],
-                  }}
-                  style={styles.completedProjectImage}
-                />
-
-                  <View style={{ flex: 1 }}>
-                    <View style={styles.projectHeader}>
-                      <Title style={styles.completedProjectTitle}>
-                        {project.name}
-                      </Title>
-
-                      <MaterialCommunityIcons
-                        name="trophy-outline"
-                        size={22}
-                        color="#7DFFB2"
-                      />
-                    </View>
-
-                    <View style={styles.pillRow}>
-                      <StatusPill label="Completed" />
-                      <StatusPill label={project.category} />
-                    </View>
-
-                    <AppText style={styles.completedText}>
-                      Build completed and archived.
-                    </AppText>
-
-                    {project.completedAt ? (
-                      <AppText style={styles.completedDate}>
-                        Finished{' '}
-                        {new Date(
-                          project.completedAt
-                        ).toLocaleDateString()}
-                      </AppText>
-                    ) : null}
-                  </View>
-                </View>
-              </Pressable>
-            ))}
-          </>
-        ) : null}
       </ScrollView>
     </Screen>
   );
@@ -440,12 +448,14 @@ const styles = StyleSheet.create({
 
   statsRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 10,
     marginBottom: 20,
   },
 
   statCard: {
     flex: 1,
+    minWidth: 128,
     backgroundColor: colors.panel,
     borderWidth: 1,
     borderColor: colors.line,
@@ -456,9 +466,21 @@ const styles = StyleSheet.create({
 
   statCardCompleted: {
     flex: 1,
+    minWidth: 128,
     backgroundColor: '#14211A',
     borderWidth: 1,
     borderColor: '#2E7D4F',
+    borderRadius: 22,
+    padding: 16,
+    minHeight: 128,
+  },
+
+  statCardArchived: {
+    flex: 1,
+    minWidth: 128,
+    backgroundColor: '#241F19',
+    borderWidth: 1,
+    borderColor: '#6B5A44',
     borderRadius: 22,
     padding: 16,
     minHeight: 128,
@@ -473,6 +495,12 @@ const styles = StyleSheet.create({
     fontSize: 34,
     marginTop: 10,
     color: '#7DFFB2',
+  },
+
+  archivedStatValue: {
+    fontSize: 34,
+    marginTop: 10,
+    color: '#B9A58A',
   },
 
   statLabel: {
@@ -490,6 +518,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginBottom: 24,
+  },
+
+  statusFilterRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 16,
+  },
+
+  statusFilterButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.panel,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: 16,
+    paddingVertical: 13,
+  },
+
+  statusFilterButtonActive: {
+    borderColor: colors.orange,
+    backgroundColor: colors.orangeSoft,
+  },
+
+  statusFilterText: {
+    color: colors.steel,
+    fontWeight: '900',
+  },
+
+  statusFilterTextActive: {
+    color: colors.orange,
   },
 
   searchBox: {
@@ -563,6 +622,18 @@ const styles = StyleSheet.create({
     backgroundColor: '#14211A',
     borderWidth: 1,
     borderColor: '#2E7D4F',
+    borderRadius: 24,
+    padding: 14,
+    gap: 16,
+    marginBottom: 14,
+  },
+
+  archivedProjectRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#241F19',
+    borderWidth: 1,
+    borderColor: '#6B5A44',
     borderRadius: 24,
     padding: 14,
     gap: 16,

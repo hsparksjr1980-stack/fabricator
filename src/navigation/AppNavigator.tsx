@@ -1,4 +1,4 @@
-import { Image, Modal, Pressable, View } from 'react-native';
+import { Alert, Image, Pressable, View } from 'react-native';
 import React from 'react';
 import {
   
@@ -22,7 +22,6 @@ import { WelcomeScreen } from '@/features/projects/WelcomeScreen';
 import { DashboardScreen } from '@/features/projects/DashboardScreen';
 import { ProjectEditScreen } from '@/features/projects/ProjectEditScreen';
 import { ProjectManagementModal } from '@/components/modals/ProjectManagementModal';
-import { EditProjectModal } from '@/components/modals/EditProjectModal';
 import { useFabricatorStore } from '@/state/useFabricatorStore';
 
 import { TimelineScreen } from '@/features/buildLog/TimelineScreen';
@@ -123,11 +122,6 @@ const [
   setProjectModalVisible,
 ] = React.useState(false);
 
-const [
-  editProjectVisible,
-  setEditProjectVisible,
-] = React.useState(false);
-
 const store =
   useFabricatorStore();
 
@@ -188,7 +182,7 @@ const activeProject =
             </Pressable>
 
             <Pressable
-            onPress={() => setEditProjectVisible(true)}
+            onPress={() => navigation.navigate('ProjectEdit' as never)}
 
 
             >
@@ -281,30 +275,68 @@ const activeProject =
 
     <ProjectManagementModal
       visible={projectModalVisible}
+      projectStatus={activeProject?.status}
       onClose={() => setProjectModalVisible(false)}
       onComplete={() => {
         if (activeProject) {
-          store.completeProject(activeProject.id);
+          Alert.alert(
+            'Complete project?',
+            'This moves the project to Completed. It remains viewable and can be archived later.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Complete Project',
+                onPress: () => {
+                  store.completeProject(activeProject.id);
+                  setProjectModalVisible(false);
+                },
+              },
+            ]
+          );
+          return;
         }
         setProjectModalVisible(false);
       }}
       onArchive={() => {
         if (activeProject) {
-          store.archiveProject(activeProject.id);
+          Alert.alert(
+            'Archive project?',
+            'This moves the project to Archived. It remains viewable and can be reopened later.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Archive Project',
+                onPress: () => {
+                  store.archiveProject(activeProject.id);
+                  setProjectModalVisible(false);
+                },
+              },
+            ]
+          );
+          return;
         }
         setProjectModalVisible(false);
       }}
       onReopen={() => {
         if (activeProject) {
-          store.reopenProject(activeProject.id);
+          Alert.alert(
+            'Reopen project?',
+            'This returns the project to Active and clears completed/archive timestamps.',
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Reopen Project',
+                onPress: () => {
+                  store.reopenProject(activeProject.id);
+                  setProjectModalVisible(false);
+                },
+              },
+            ]
+          );
+          return;
         }
         setProjectModalVisible(false);
       }}
-    />
-
-    <EditProjectModal
-      visible={editProjectVisible}
-      onClose={() => setEditProjectVisible(false)}
     />
   </>
   );

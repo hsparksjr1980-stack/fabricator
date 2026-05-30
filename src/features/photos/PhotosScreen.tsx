@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import * as ImagePicker from 'expo-image-picker';
-import { Image, ImageBackground, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Image, ImageBackground, Modal, Pressable, ScrollView, StyleSheet, Alert, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button } from '@/components/Button';
@@ -32,17 +32,62 @@ return photos.filter(p=>p.tag===filter);
 
 const featured=filteredPhotos[0]||photos[0];
 
-const pickImage=async()=>{
-const permission=await ImagePicker.requestMediaLibraryPermissionsAsync();
-if(!permission.granted)return;
+const pickImage = async () => {
 
-const result=await ImagePicker.launchImageLibraryAsync({
-mediaTypes:['images'],
-quality:.8,
-allowsEditing:true
-});
+  try {
 
-if(!result.canceled && result.assets?.[0]) setUri(result.assets[0].uri);
+    const permission =
+
+      await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    console.log('Media permission:', permission);
+
+    if (!permission.granted) {
+
+      Alert.alert(
+
+        'Permission Required',
+
+        'Please allow photo library access.'
+
+      );
+
+      return;
+
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+
+      mediaTypes: ['images'],
+
+      quality: 0.8,
+
+      allowsEditing: true,
+
+    });
+
+    console.log('Gallery result:', JSON.stringify(result));
+
+    if (!result.canceled && result.assets?.[0]) {
+
+      setUri(result.assets[0].uri);
+
+    }
+
+  } catch (error) {
+
+    console.error('Gallery picker failed:', error);
+
+    Alert.alert(
+
+      'Gallery Error',
+
+      error instanceof Error ? error.message : String(error)
+
+    );
+
+  }
+
 };
 
 const takePhoto=async()=>{
