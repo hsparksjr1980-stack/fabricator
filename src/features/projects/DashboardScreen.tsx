@@ -1,32 +1,19 @@
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useEffect, useMemo } from 'react';
+import { useEffect } from 'react';
 
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { AppText, Label, Title } from '@/components/Text';
 import { useFabricatorStore } from '@/state/useFabricatorStore';
-import { Project, ProjectStatus } from '@/types/models';
+import { BuildPhoto, BuildTask, Part, ProjectStatus } from '@/types/models';
 import { colors, radius, spacing } from '@/theme/theme';
 import { RecentActivityWidget } from '@/components/dashboard/widgets/RecentActivityWidget';
 
 function formatCurrency(value?: number) {
   const safeValue = Number(value || 0);
   return `$${safeValue.toLocaleString()}`;
-}
-
-function formatDate(value?: string) {
-  if (!value) return 'No updates yet';
-
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
 }
 
 function statusLabel(status: ProjectStatus) {
@@ -41,102 +28,38 @@ function statusIcon(status: ProjectStatus): keyof typeof MaterialCommunityIcons.
   return 'garage-open-variant';
 }
 
-function StatCard({
+function BudgetChip({ label, value, tone }: { label: string; value: string; tone?: 'good' | 'warning' }) {
+  return (
+    <View style={styles.budgetChip}>
+      <AppText style={styles.budgetLabel}>{label}</AppText>
+      <AppText style={[styles.budgetValue, tone === 'good' && styles.goodValue, tone === 'warning' && styles.warningValue]}>
+        {value}
+      </AppText>
+    </View>
+  );
+}
+
+function NavTile({
   label,
   value,
   icon,
-  tone = 'default',
   onPress,
 }: {
   label: string;
   value: string | number;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
-  tone?: 'default' | 'success' | 'muted' | 'photo';
   onPress: () => void;
 }) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.statCard,
-        tone === 'success' && styles.statCardSuccess,
-        tone === 'muted' && styles.statCardMuted,
-        tone === 'photo' && styles.statCardPhoto,
-        pressed && styles.pressed,
-      ]}
-    >
-      <View style={styles.statTopRow}>
-        <View style={styles.statIconWrap}>
-          <MaterialCommunityIcons name={icon} size={18} color={colors.orange} />
-        </View>
-        <MaterialCommunityIcons name="chevron-right" size={18} color={colors.steel} />
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.navTile, pressed && styles.pressed]}>
+      <View style={styles.navIconWrap}>
+        <MaterialCommunityIcons name={icon} size={19} color={colors.orange} />
       </View>
-
-      <Title style={styles.statValue}>{value}</Title>
-      <AppText style={styles.statLabel}>{label}</AppText>
-    </Pressable>
-  );
-}
-
-function CompactProjectCard({
-  project,
-  taskCount,
-  partCount,
-  photoUri,
-  onPress,
-}: {
-  project: Project;
-  taskCount: number;
-  partCount: number;
-  photoUri?: string;
-  onPress: () => void;
-}) {
-  const isArchived = project.status === 'archived';
-  const isCompleted = project.status === 'completed';
-
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [
-        styles.projectCard,
-        isArchived && styles.projectCardArchived,
-        isCompleted && styles.projectCardCompleted,
-        pressed && styles.pressed,
-      ]}
-    >
-      {photoUri ? <Image source={{ uri: photoUri }} style={styles.projectThumb} /> : (
-        <View style={styles.projectThumbPlaceholder}>
-          <MaterialCommunityIcons name="hammer-wrench" size={22} color={colors.orange} />
-        </View>
-      )}
-
-      <View style={styles.projectBody}>
-        <View style={styles.projectHeaderRow}>
-          <AppText style={styles.projectName} numberOfLines={1}>
-            {project.name}
-          </AppText>
-
-          <View style={[styles.statusBadge, isCompleted && styles.statusBadgeComplete, isArchived && styles.statusBadgeArchived]}>
-            <MaterialCommunityIcons name={statusIcon(project.status)} size={12} color={colors.white} />
-            <AppText style={styles.statusBadgeText}>{statusLabel(project.status)}</AppText>
-          </View>
-        </View>
-
-        <AppText style={styles.projectMeta} numberOfLines={1}>
-          {project.category || 'General'} • {project.phase || 'Planning'}
-        </AppText>
-
-        <View style={styles.progressTrack}>
-          <View style={[styles.progressFill, { width: `${Math.max(0, Math.min(project.progress || 0, 100))}%` }]} />
-        </View>
-
-        <View style={styles.projectFooterRow}>
-          <AppText style={styles.projectFooterText}>{project.progress || 0}%</AppText>
-          <AppText style={styles.projectFooterText}>{taskCount} tasks</AppText>
-          <AppText style={styles.projectFooterText}>{partCount} parts</AppText>
-          <AppText style={styles.projectFooterText}>{formatDate(project.updatedAt)}</AppText>
-        </View>
+      <View style={styles.navTextWrap}>
+        <AppText style={styles.navValue}>{value}</AppText>
+        <AppText style={styles.navLabel}>{label}</AppText>
       </View>
+      <MaterialCommunityIcons name="chevron-right" size={18} color={colors.steel} />
     </Pressable>
   );
 }
@@ -152,184 +75,103 @@ export function DashboardScreen() {
     }
   }, [navigation, project]);
 
-  const projectStats = useMemo(() => {
-    const active = store.projects.filter(item => item.status === 'active');
-    const completed = store.projects.filter(item => item.status === 'completed');
-    const archived = store.projects.filter(item => item.status === 'archived');
-
-    return {
-      active,
-      completed,
-      archived,
-      total: store.projects.length,
-      photos: store.photos.length,
-    };
-  }, [store.photos.length, store.projects]);
-
   if (!project) return null;
 
-  const projectTasks = store.tasks.filter(task => task.projectId === project.id);
-  const projectParts = store.parts.filter(part => part.projectId === project.id);
-  const projectPhotos = store.photos.filter(photo => photo.projectId === project.id);
-  const coverPhoto = store.photos.find(photo => photo.id === project.coverPhotoId) || projectPhotos[0];
+  const projectTasks = store.tasks.filter((task: BuildTask) => task.projectId === project.id);
+  const projectParts = store.parts.filter((part: Part) => part.projectId === project.id);
+  const projectPhotos = store.photos.filter((photo: BuildPhoto) => photo.projectId === project.id);
+  const coverPhoto = store.photos.find((photo: BuildPhoto) => photo.id === project.coverPhotoId) || projectPhotos[0];
 
-  const activePreview = projectStats.active.slice(0, 4);
-  const actualSpend = projectParts.reduce((sum, part) => sum + (part.actualCost || 0), 0);
+  const completedTasks = projectTasks.filter(task => task.status === 'Done' || task.status === 'Completed').length;
+  const totalTasks = projectTasks.length;
+  const progress = Math.max(0, Math.min(project.progress || 0, 100));
   const expectedBudget = project.expectedBudget ?? project.budgetTarget ?? 0;
-
-  const openProjectList = (filter?: 'active' | 'completed' | 'archived') => {
-    if (filter) {
-      store.setProjectFilter(filter);
-    }
-    navigation.navigate('Welcome');
-  };
+  const actualSpend = projectParts.reduce((sum, part) => sum + (part.actualCost || 0), 0);
+  const remainingBudget = expectedBudget - actualSpend;
 
   return (
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
-        <View style={styles.headerRow}>
-          <View style={styles.headerTextWrap}>
-            <Label>DASHBOARD</Label>
-            <Title style={styles.headerTitle}>Projects First</Title>
-            <AppText style={styles.headerCopy}>
-              Active builds, project status, budget, parts, and documentation without the oversized panels.
-            </AppText>
-          </View>
-
-          <Pressable style={styles.headerAction} onPress={() => openProjectList()}>
-            <MaterialCommunityIcons name="garage" size={22} color={colors.orange} />
-          </Pressable>
-        </View>
-
-        <View style={styles.statGrid}>
-          <StatCard
-            label="Projects"
-            value={projectStats.total}
-            icon="folder-multiple-outline"
-            onPress={() => openProjectList()}
-          />
-          <StatCard
-            label="Active"
-            value={projectStats.active.length}
-            icon="garage-open-variant"
-            onPress={() => openProjectList('active')}
-          />
-          <StatCard
-            label="Completed"
-            value={projectStats.completed.length}
-            icon="check-decagram-outline"
-            tone="success"
-            onPress={() => openProjectList('completed')}
-          />
-          <StatCard
-            label="Archived"
-            value={projectStats.archived.length}
-            icon="archive-outline"
-            tone="muted"
-            onPress={() => openProjectList('archived')}
-          />
-          <StatCard
-            label="Photos"
-            value={projectStats.photos}
-            icon="image-multiple-outline"
-            tone="photo"
-            onPress={() => navigation.navigate('Photos')}
-          />
-        </View>
-
-        <View style={styles.sectionHeader}>
-          <View>
-            <Label>CURRENT PROJECT</Label>
-            <AppText style={styles.sectionSubcopy}>Selected build profile</AppText>
-          </View>
-          <Pressable onPress={() => navigation.navigate('ProjectEdit')} style={styles.smallLinkButton}>
-            <MaterialCommunityIcons name="square-edit-outline" size={15} color={colors.orange} />
-            <AppText style={styles.smallLinkText}>Edit</AppText>
-          </Pressable>
-        </View>
-
-        <CompactProjectCard
-          project={project}
-          taskCount={projectTasks.length}
-          partCount={projectParts.length}
-          photoUri={coverPhoto?.uri}
-          onPress={() => navigation.navigate('ProjectEdit')}
-        />
-
-        <View style={styles.summaryGrid}>
-          <Card style={styles.miniCard}>
-            <Label>TASKS</Label>
-            <Title style={styles.miniValue}>{projectTasks.length}</Title>
-            <AppText style={styles.miniText}>Open and completed shop work</AppText>
-          </Card>
-
-          <Card style={styles.miniCard}>
-            <Label>PARTS</Label>
-            <Title style={styles.miniValue}>{projectParts.length}</Title>
-            <AppText style={styles.miniText}>Needed, ordered, on hand, installed</AppText>
-          </Card>
-        </View>
-
-        <Card style={styles.budgetCard}>
-          <View style={styles.budgetHeaderRow}>
-            <View>
-              <Label>BUDGET</Label>
-              <AppText style={styles.miniText}>Expected versus actual</AppText>
+        <Card style={styles.heroCard}>
+          {coverPhoto?.uri ? (
+            <Image source={{ uri: coverPhoto.uri }} style={styles.coverImage} />
+          ) : (
+            <View style={styles.coverPlaceholder}>
+              <MaterialCommunityIcons name="hammer-wrench" size={34} color={colors.orange} />
             </View>
-            <AppText style={styles.budgetRemaining}>
-              {formatCurrency(Math.max(expectedBudget - actualSpend, 0))} left
-            </AppText>
-          </View>
+          )}
 
-          <View style={styles.budgetRow}>
-            <View style={styles.budgetPill}>
-              <AppText style={styles.budgetPillLabel}>Expected</AppText>
-              <AppText style={styles.budgetPillValue}>{formatCurrency(expectedBudget)}</AppText>
+          <View style={styles.heroBody}>
+            <View style={styles.titleRow}>
+              <View style={styles.titleColumn}>
+                <Label>PROJECT DASHBOARD</Label>
+                <Title style={styles.projectTitle}>{project.name}</Title>
+              </View>
+
+              <Pressable style={styles.editButton} onPress={() => navigation.navigate('ProjectEdit')}>
+                <MaterialCommunityIcons name="square-edit-outline" size={16} color={colors.orange} />
+                <AppText style={styles.editText}>Edit</AppText>
+              </Pressable>
             </View>
-            <View style={styles.budgetPill}>
-              <AppText style={styles.budgetPillLabel}>Actual</AppText>
-              <AppText style={styles.budgetPillValue}>{formatCurrency(actualSpend)}</AppText>
+
+            <View style={styles.metaWrap}>
+              <View style={styles.metaPill}>
+                <MaterialCommunityIcons name="shape-outline" size={13} color={colors.orange} />
+                <AppText style={styles.metaText}>{project.category || 'General'}</AppText>
+              </View>
+
+              <View style={styles.metaPill}>
+                <MaterialCommunityIcons name="timeline-clock-outline" size={13} color={colors.orange} />
+                <AppText style={styles.metaText}>{project.phase || 'Planning'}</AppText>
+              </View>
+
+              <View style={[styles.statusPill, project.status === 'completed' && styles.statusComplete, project.status === 'archived' && styles.statusArchived]}>
+                <MaterialCommunityIcons name={statusIcon(project.status)} size={13} color={colors.white} />
+                <AppText style={styles.statusText}>{statusLabel(project.status)}</AppText>
+              </View>
             </View>
-            <View style={styles.budgetPill}>
-              <AppText style={styles.budgetPillLabel}>Photos</AppText>
-              <AppText style={styles.budgetPillValue}>{projectPhotos.length}</AppText>
+
+            <View style={styles.progressPanel}>
+              <View style={styles.progressTopRow}>
+                <AppText style={styles.progressTitle}>Progress</AppText>
+                <AppText style={styles.progressPercent}>{progress}%</AppText>
+              </View>
+
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${progress}%` }]} />
+              </View>
+
+              <AppText style={styles.progressMeta}>{completedTasks} of {totalTasks} tasks completed</AppText>
+            </View>
+
+            <View style={styles.budgetRow}>
+              <BudgetChip label="Expected" value={formatCurrency(expectedBudget)} />
+              <BudgetChip label="Actual" value={formatCurrency(actualSpend)} />
+              <BudgetChip label="Remaining" value={formatCurrency(Math.abs(remainingBudget))} tone={remainingBudget >= 0 ? 'good' : 'warning'} />
             </View>
           </View>
         </Card>
 
-        <View style={styles.sectionHeader}>
-          <View>
-            <Label>ACTIVE PROJECTS</Label>
-            <AppText style={styles.sectionSubcopy}>Tap the Active card above for the full active list.</AppText>
-          </View>
+        <View style={styles.navGrid}>
+          <NavTile
+            label="Tasks"
+            value={projectTasks.length}
+            icon="clipboard-check-outline"
+            onPress={() => navigation.navigate('Tasks')}
+          />
+          <NavTile
+            label="Parts"
+            value={projectParts.length}
+            icon="package-variant-closed"
+            onPress={() => navigation.navigate('Parts')}
+          />
+          <NavTile
+            label="Photos"
+            value={projectPhotos.length}
+            icon="image-multiple-outline"
+            onPress={() => navigation.navigate('Photos')}
+          />
         </View>
-
-        {activePreview.length ? (
-          activePreview.map(item => {
-            const tasks = store.tasks.filter(task => task.projectId === item.id);
-            const parts = store.parts.filter(part => part.projectId === item.id);
-            const cover = store.photos.find(photo => photo.id === item.coverPhotoId) ||
-              store.photos.find(photo => photo.projectId === item.id);
-
-            return (
-              <CompactProjectCard
-                key={item.id}
-                project={item}
-                taskCount={tasks.length}
-                partCount={parts.length}
-                photoUri={cover?.uri}
-                onPress={() => {
-                  store.selectProject(item.id);
-                  navigation.navigate('Dashboard');
-                }}
-              />
-            );
-          })
-        ) : (
-          <Card style={styles.emptyCard}>
-            <AppText>No active projects yet.</AppText>
-          </Card>
-        )}
 
         <RecentActivityWidget />
       </ScrollView>
@@ -341,271 +183,212 @@ const styles = StyleSheet.create({
   content: {
     paddingBottom: 96,
   },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    justifyContent: 'space-between',
-    gap: 14,
+  heroCard: {
     marginBottom: 14,
+    padding: 12,
+    borderColor: 'rgba(217,106,29,0.36)',
   },
-  headerTextWrap: {
+  coverImage: {
+    width: '100%',
+    height: 132,
+    borderRadius: 18,
+    marginBottom: 12,
+  },
+  coverPlaceholder: {
+    height: 132,
+    borderRadius: 18,
+    marginBottom: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.charcoal,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  heroBody: {
+    paddingHorizontal: 4,
+    paddingBottom: 4,
+  },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    gap: 12,
+  },
+  titleColumn: {
     flex: 1,
   },
-  headerTitle: {
-    fontSize: 28,
-    lineHeight: 32,
-    marginTop: 4,
+  projectTitle: {
+    fontSize: 31,
+    lineHeight: 35,
+    marginTop: 5,
   },
-  headerCopy: {
-    color: colors.steel,
-    marginTop: 6,
-    lineHeight: 19,
-  },
-  headerAction: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.panel,
-    borderWidth: 1,
-    borderColor: colors.line,
-  },
-  statGrid: {
+  editButton: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 18,
-  },
-  statCard: {
-    width: '31.6%',
-    minHeight: 104,
-    backgroundColor: colors.panel,
+    alignItems: 'center',
+    gap: 7,
     borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.lg,
-    padding: 12,
-  },
-  statCardSuccess: {
-    borderColor: 'rgba(110,159,105,0.55)',
-    backgroundColor: '#142017',
-  },
-  statCardMuted: {
-    opacity: 0.82,
-    backgroundColor: colors.charcoal,
-  },
-  statCardPhoto: {
-    borderColor: 'rgba(217,106,29,0.4)',
+    borderColor: 'rgba(217,106,29,0.56)',
     backgroundColor: colors.orangeSoft,
-  },
-  statTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  statIconWrap: {
-    width: 30,
-    height: 30,
-    borderRadius: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.graphite,
-  },
-  statValue: {
-    fontSize: 25,
-    lineHeight: 29,
-    marginTop: 10,
-  },
-  statLabel: {
-    color: colors.white,
-    fontWeight: '900',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-    marginTop: 2,
-  },
-  sectionSubcopy: {
-    color: colors.steel,
-    marginTop: 3,
-    fontSize: 12,
-  },
-  smallLinkButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingVertical: 7,
-    paddingHorizontal: 10,
+    paddingVertical: 9,
+    paddingHorizontal: 13,
     borderRadius: 999,
-    backgroundColor: colors.orangeSoft,
-    borderWidth: 1,
-    borderColor: 'rgba(217,106,29,0.35)',
   },
-  smallLinkText: {
+  editText: {
     color: colors.orange,
     fontWeight: '900',
     fontSize: 12,
   },
-  projectCard: {
+  metaWrap: {
     flexDirection: 'row',
-    gap: 12,
-    backgroundColor: colors.panel,
-    borderWidth: 1,
-    borderColor: colors.line,
-    borderRadius: radius.lg,
-    padding: 10,
-    marginBottom: 10,
-  },
-  projectCardCompleted: {
-    borderColor: 'rgba(110,159,105,0.45)',
-  },
-  projectCardArchived: {
-    opacity: 0.72,
-    backgroundColor: colors.charcoal,
-  },
-  projectThumb: {
-    width: 66,
-    height: 66,
-    borderRadius: 16,
-    backgroundColor: colors.graphite,
-  },
-  projectThumbPlaceholder: {
-    width: 66,
-    height: 66,
-    borderRadius: 16,
-    backgroundColor: colors.graphite,
-    borderWidth: 1,
-    borderColor: colors.line,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  projectBody: {
-    flex: 1,
-  },
-  projectHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexWrap: 'wrap',
     gap: 8,
+    marginTop: 13,
   },
-  projectName: {
-    flex: 1,
+  metaPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.charcoal,
+    borderWidth: 1,
+    borderColor: colors.line,
+    paddingVertical: 8,
+    paddingHorizontal: 11,
+    borderRadius: 999,
+  },
+  metaText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '800',
+  },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: colors.orange,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 999,
+  },
+  statusComplete: {
+    backgroundColor: colors.green,
+  },
+  statusArchived: {
+    backgroundColor: colors.steel,
+  },
+  statusText: {
+    color: colors.white,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  progressPanel: {
+    marginTop: 14,
+    backgroundColor: colors.black,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 13,
+  },
+  progressTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  progressTitle: {
     color: colors.white,
     fontWeight: '900',
     fontSize: 15,
   },
-  projectMeta: {
-    color: colors.steel,
-    fontSize: 12,
-    marginTop: 4,
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: colors.orangeSoft,
-    borderRadius: 999,
-    paddingVertical: 4,
-    paddingHorizontal: 7,
-  },
-  statusBadgeComplete: {
-    backgroundColor: '#1F3A29',
-  },
-  statusBadgeArchived: {
-    backgroundColor: colors.graphite,
-  },
-  statusBadgeText: {
-    color: colors.white,
-    fontSize: 10,
+  progressPercent: {
+    color: colors.orange,
     fontWeight: '900',
+    fontSize: 18,
   },
   progressTrack: {
-    height: 6,
+    height: 8,
     borderRadius: 999,
+    backgroundColor: colors.charcoal,
     overflow: 'hidden',
-    backgroundColor: colors.graphite,
-    marginTop: 9,
+    marginTop: 10,
   },
   progressFill: {
     height: '100%',
     backgroundColor: colors.orange,
   },
-  projectFooterRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
-  },
-  projectFooterText: {
-    color: colors.muted,
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  summaryGrid: {
-    flexDirection: 'row',
-    gap: 10,
-    marginBottom: 10,
-  },
-  miniCard: {
-    flex: 1,
-    padding: 12,
-  },
-  miniValue: {
-    fontSize: 23,
-    lineHeight: 28,
-    marginTop: 4,
-  },
-  miniText: {
+  progressMeta: {
     color: colors.steel,
+    fontWeight: '800',
     fontSize: 12,
-    lineHeight: 17,
-    marginTop: 3,
-  },
-  budgetCard: {
-    padding: 13,
-    marginBottom: 18,
-  },
-  budgetHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  budgetRemaining: {
-    color: colors.orange,
-    fontWeight: '900',
-    fontSize: 13,
+    marginTop: 8,
   },
   budgetRow: {
     flexDirection: 'row',
     gap: 8,
     marginTop: 12,
   },
-  budgetPill: {
+  budgetChip: {
     flex: 1,
-    backgroundColor: colors.graphite,
+    backgroundColor: colors.charcoal,
     borderWidth: 1,
     borderColor: colors.line,
-    borderRadius: 14,
-    padding: 10,
+    borderRadius: 16,
+    paddingVertical: 11,
+    paddingHorizontal: 10,
   },
-  budgetPillLabel: {
+  budgetLabel: {
     color: colors.steel,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  budgetPillValue: {
-    color: colors.white,
-    fontSize: 14,
+    fontSize: 10,
     fontWeight: '900',
-    marginTop: 4,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
   },
-  emptyCard: {
-    padding: spacing.md,
+  budgetValue: {
+    color: colors.white,
+    fontSize: 18,
+    fontWeight: '900',
+    marginTop: 6,
+  },
+  goodValue: {
+    color: colors.green,
+  },
+  warningValue: {
+    color: colors.red,
+  },
+  navGrid: {
+    gap: 10,
+    marginBottom: 14,
+  },
+  navTile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: colors.panel,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.lg,
+    paddingVertical: 13,
+    paddingHorizontal: 14,
+  },
+  navIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: colors.orangeSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  navTextWrap: {
+    flex: 1,
+  },
+  navValue: {
+    color: colors.white,
+    fontSize: 19,
+    fontWeight: '900',
+  },
+  navLabel: {
+    color: colors.steel,
+    fontSize: 12,
+    fontWeight: '900',
+    marginTop: 1,
   },
   pressed: {
     opacity: 0.78,
