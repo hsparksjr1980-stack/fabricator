@@ -1,4 +1,7 @@
 {
+  "name": "fabricator",
+  "version": "0.1.0",
+  "private": true,
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
@@ -36,8 +39,5 @@
     "@types/react": "~19.1.10",
     "babel-plugin-module-resolver": "^5.0.3",
     "typescript": "~5.9.2"
-  },
-  "private": true,
-  "name": "fabricator",
-  "version": "0.1.0"
+  }
 }

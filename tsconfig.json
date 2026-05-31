@@ -1,11 +1,18 @@
 {
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "strict": true,
     "ignoreDeprecations": "5.0",
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"]
     }
   },
-  "exclude": ["supabase/functions"]
+  "exclude": [
+    "node_modules",
+    "supabase/functions",
+    "dist",
+    "server.ts",
+    "vite.config.ts"
+  ]
 }
