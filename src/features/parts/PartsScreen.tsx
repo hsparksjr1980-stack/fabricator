@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
+  Alert,
   Linking,
   Modal,
   Pressable,
@@ -10,62 +11,127 @@ import {
 } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
-import { Button } from '@/components/Button';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { AppText, Label, Title } from '@/components/Text';
 import { useFabricatorStore } from '@/state/useFabricatorStore';
-import { Part, PartStatus } from '@/types/models';
-import { colors, radius, spacing } from '@/theme/theme';
+import { Part, PartStatus, ProjectCategory } from '@/types/models';
+import { colors, radius, shadows, spacing } from '@/theme/theme';
 
-const baseSystems = [
-  'Chassis',
-  'Suspension',
-  'Wiring',
-  'Drivetrain',
-  'Body',
-  'Interior',
-  'Paint',
-  'Engine',
-  'Fabrication',
-  'Hardware',
-  'Shop Supplies',
-];
+type PartFilter = 'Needed' | 'Ordered' | 'Received' | 'Installed' | 'All';
+type SearchProviderKey = 'google' | 'futureVendor';
 
-const partStatuses: PartStatus[] = [
-  'Need to Order',
-  'Ordered',
-  'On Hand',
-  'Installed',
-];
+const PART_FILTERS: PartFilter[] = ['Needed', 'Ordered', 'Received', 'Installed', 'All'];
+const PART_STATUSES: PartStatus[] = ['Need to Order', 'Ordered', 'Received', 'Installed'];
 
-type PartFilter = 'Needed' | 'Ordered' | 'On Hand' | 'Installed' | 'All';
+const WORK_AREAS_BY_CATEGORY: Record<string, string[]> = {
+  Vehicle: [
+    'Chassis',
+    'Suspension',
+    'Wiring',
+    'Drivetrain',
+    'Body',
+    'Interior',
+    'Paint',
+    'Engine',
+    'Fabrication',
+    'Hardware',
+  ],
+  Woodworking: [
+    'Lumber',
+    'Hardware',
+    'Joinery',
+    'Finishing',
+    'Tools',
+    'Shop Supplies',
+  ],
+  Electronics: [
+    'Wiring',
+    'Circuit',
+    'Sensors',
+    'Switches',
+    'Power',
+    'Enclosure',
+    'Tools',
+  ],
+  'Home Improvement': [
+    'Demo',
+    'Framing',
+    'Electrical',
+    'Plumbing',
+    'Drywall',
+    'Paint',
+    'Finish Work',
+    'Hardware',
+  ],
+  Fabrication: [
+    'Steel',
+    'Aluminum',
+    'Hardware',
+    'Welding',
+    'Fitment',
+    'Grinding',
+    'Paint',
+    'Shop Supplies',
+  ],
+  Crafts: [
+    'Materials',
+    'Tools',
+    'Assembly',
+    'Detailing',
+    'Finishing',
+    'Packaging',
+  ],
+  General: [
+    'Parts',
+    'Materials',
+    'Hardware',
+    'Tools',
+    'Shop Supplies',
+    'Finishing',
+  ],
+};
 
-const partFilters: PartFilter[] = [
-  'Needed',
-  'Ordered',
-  'On Hand',
-  'Installed',
-  'All',
-];
+const SEARCH_PROVIDERS: Record<SearchProviderKey, {
+  key: SearchProviderKey;
+  label: string;
+  buildUrl: (query: string) => string;
+  enabled: boolean;
+}> = {
+  google: {
+    key: 'google',
+    label: 'Google',
+    buildUrl: query => `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+    enabled: true,
+  },
+  futureVendor: {
+    key: 'futureVendor',
+    label: 'Vendor search',
+    buildUrl: query => `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+    enabled: false,
+  },
+};
 
-function visibleStatus(status: PartStatus) {
+function getWorkAreas(category?: ProjectCategory | string) {
+  return WORK_AREAS_BY_CATEGORY[category || 'General'] || WORK_AREAS_BY_CATEGORY.General;
+}
+
+function displayStatus(status: PartStatus): PartFilter {
   if (status === 'Need to Order') return 'Needed';
+  if (status === 'On Hand' || status === 'Received') return 'Received';
   return status;
 }
 
-function nextPartStatus(status: PartStatus): PartStatus {
-  if (status === 'Need to Order') return 'Ordered';
-  if (status === 'Ordered') return 'On Hand';
-  if (status === 'On Hand') return 'Installed';
-  return 'Need to Order';
+function filterMatches(part: Part, filter: PartFilter) {
+  if (filter === 'All') return true;
+  if (filter === 'Needed') return part.status === 'Need to Order';
+  if (filter === 'Received') return part.status === 'Received' || part.status === 'On Hand';
+  return part.status === filter;
 }
 
 function money(value?: number) {
-  if (!value) return '$0';
-  return `$${value.toLocaleString(undefined, {
-    maximumFractionDigits: 0,
-  })}`;
+  const safe = typeof value === 'number' && Number.isFinite(value) ? value : 0;
+  return `$${safe.toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
 }
 
 function parseMoney(value: string) {
@@ -75,276 +141,270 @@ function parseMoney(value: string) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function buildSearchQuery(part: Part) {
+function buildPartSearchQuery(part: Partial<Part>, category?: ProjectCategory | string) {
   return [
+    category,
+    part.system,
     part.name,
     part.partNumber,
     part.vendor,
+    part.description,
   ]
     .filter(Boolean)
-    .join(' ');
+    .join(' ')
+    .trim();
 }
 
-function Chip({
+function openPartSearch(part: Partial<Part>, category?: ProjectCategory | string, providerKey: SearchProviderKey = 'google') {
+  const provider = SEARCH_PROVIDERS[providerKey];
+  const query = buildPartSearchQuery(part, category);
+
+  if (!query || !provider.enabled) return;
+
+  Linking.openURL(provider.buildUrl(query));
+}
+
+function SelectField({
   label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: string[];
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <Pressable style={styles.selectField} onPress={() => setOpen(true)}>
+        <View>
+          <Label>{label}</Label>
+          <AppText style={styles.selectValue}>{value}</AppText>
+        </View>
+        <MaterialCommunityIcons name="chevron-down" size={22} color={colors.orange} />
+      </Pressable>
+
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <View style={styles.dropdownOverlay}>
+          <Pressable style={styles.dropdownBackdrop} onPress={() => setOpen(false)} />
+
+          <View style={styles.dropdownCard}>
+            <View style={styles.dropdownHeader}>
+              <View>
+                <Label>{label}</Label>
+                <Title style={styles.dropdownTitle}>Choose option</Title>
+              </View>
+              <Pressable style={styles.dropdownClose} onPress={() => setOpen(false)}>
+                <MaterialCommunityIcons name="close" size={22} color={colors.white} />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {options.map(option => {
+                const selected = option === value;
+
+                return (
+                  <Pressable
+                    key={option}
+                    style={[styles.optionRow, selected && styles.optionRowSelected]}
+                    onPress={() => {
+                      onChange(option);
+                      setOpen(false);
+                    }}
+                  >
+                    <AppText style={[styles.optionText, selected && styles.optionTextSelected]}>
+                      {option}
+                    </AppText>
+                    {selected ? <MaterialCommunityIcons name="check" size={20} color={colors.orange} /> : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
+    </>
+  );
+}
+
+function SummaryTile({
+  label,
+  value,
   active,
   onPress,
 }: {
   label: string;
+  value: number | string;
   active?: boolean;
-  onPress?: () => void;
+  onPress: () => void;
 }) {
   return (
     <Pressable
       onPress={onPress}
-      disabled={!onPress}
-      style={[
-        styles.chip,
-        active && styles.chipActive,
-      ]}
-    >
-      <AppText
-        style={[
-          styles.chipText,
-          active && styles.chipTextActive,
-        ]}
-      >
-        {label}
-      </AppText>
-    </Pressable>
-  );
-}
-
-function PartRow({
-  part,
-  onAdvance,
-  onEdit,
-}: {
-  part: Part;
-  onAdvance: () => void;
-  onEdit: () => void;
-}) {
-  const search = () => {
-    const query = buildSearchQuery(part);
-    if (!query.trim()) return;
-
-    Linking.openURL(
-      `https://www.google.com/search?q=${encodeURIComponent(query)}`
-    );
-  };
-
-  return (
-    <Pressable
-      onPress={onAdvance}
-      onLongPress={onEdit}
       style={({ pressed }) => [
-        styles.partRow,
-        part.status === 'Installed' && styles.installedRow,
+        styles.summaryTile,
+        active && styles.summaryTileActive,
         pressed && styles.pressed,
       ]}
     >
-      <View style={styles.partBody}>
-        <View style={styles.partTop}>
-          <AppText
-            numberOfLines={1}
-            style={styles.partTitle}
-          >
-            {part.name}
-          </AppText>
-
-          <View style={styles.statusPill}>
-            <AppText style={styles.statusText}>
-              {visibleStatus(part.status)}
-            </AppText>
-          </View>
-        </View>
-
-        <View style={styles.partMeta}>
-          <AppText
-            numberOfLines={1}
-            style={styles.systemText}
-          >
-            {part.system}
-          </AppText>
-
-          {part.vendor ? (
-            <AppText
-              numberOfLines={1}
-              style={styles.vendorText}
-            >
-              {part.vendor}
-            </AppText>
-          ) : null}
-        </View>
-
-        <View style={styles.costRow}>
-          <AppText style={styles.costText}>
-            Est {money(part.estimatedCost)}
-          </AppText>
-          <AppText style={styles.costText}>
-            Actual {money(part.actualCost)}
-          </AppText>
-        </View>
-      </View>
-
-      <View style={styles.iconStack}>
-        <Pressable
-          onPress={search}
-          hitSlop={8}
-          style={styles.iconButton}
-        >
-          <MaterialCommunityIcons
-            name="magnify"
-            size={18}
-            color={colors.orange}
-          />
-        </Pressable>
-
-        <Pressable
-          onPress={onEdit}
-          hitSlop={8}
-          style={styles.iconButton}
-        >
-          <MaterialCommunityIcons
-            name="pencil-outline"
-            size={18}
-            color={colors.orange}
-          />
-        </Pressable>
-      </View>
+      <Title style={styles.summaryValue}>{value}</Title>
+      <AppText style={[styles.summaryLabel, active && styles.summaryLabelActive]}>{label}</AppText>
     </Pressable>
   );
 }
 
-function PartEditModal({
-  visible,
+function PartCard({
   part,
+  category,
+  onEdit,
+}: {
+  part: Part;
+  category?: ProjectCategory | string;
+  onEdit: () => void;
+}) {
+  return (
+    <Card style={styles.partCard}>
+      <View style={styles.partHeaderRow}>
+        <View style={styles.partTitleWrap}>
+          <AppText style={styles.partTitle} numberOfLines={1}>{part.name}</AppText>
+          <AppText style={styles.partMeta} numberOfLines={1}>
+            {part.system || 'General'}{part.vendor ? ` • ${part.vendor}` : ''}
+          </AppText>
+        </View>
+
+        <View style={styles.statusBadge}>
+          <AppText style={styles.statusText}>{displayStatus(part.status)}</AppText>
+        </View>
+      </View>
+
+      {part.description ? (
+        <AppText style={styles.descriptionText} numberOfLines={2}>{part.description}</AppText>
+      ) : null}
+
+      <View style={styles.costRow}>
+        <View style={styles.costPill}>
+          <Label>EST</Label>
+          <AppText style={styles.costValue}>{money(part.estimatedCost)}</AppText>
+        </View>
+        <View style={styles.costPill}>
+          <Label>ACTUAL</Label>
+          <AppText style={styles.costValue}>{money(part.actualCost)}</AppText>
+        </View>
+      </View>
+
+      <View style={styles.cardActionRow}>
+        <Pressable style={styles.cardActionButton} onPress={() => openPartSearch(part, category, 'google')}>
+          <MaterialCommunityIcons name="magnify" size={17} color={colors.orange} />
+          <AppText style={styles.cardActionText}>Search</AppText>
+        </Pressable>
+
+        <Pressable style={styles.cardActionButton} onPress={onEdit}>
+          <MaterialCommunityIcons name="pencil-outline" size={17} color={colors.orange} />
+          <AppText style={styles.cardActionText}>Edit</AppText>
+        </Pressable>
+      </View>
+    </Card>
+  );
+}
+
+function PartFormSheet({
+  visible,
+  mode,
+  part,
+  workAreas,
   onClose,
   onSave,
   onDelete,
 }: {
   visible: boolean;
+  mode: 'add' | 'edit';
   part: Part | null;
+  workAreas: string[];
   onClose: () => void;
-  onSave: (updates: Partial<Part>) => void;
-  onDelete: () => void;
+  onSave: (data: {
+    name: string;
+    estimatedCost?: number;
+    actualCost?: number;
+    vendor?: string;
+    status: PartStatus;
+    system: string;
+    description?: string;
+  }) => void;
+  onDelete?: () => void;
 }) {
   const [name, setName] = useState('');
-  const [system, setSystem] = useState('Chassis');
-  const [status, setStatus] = useState<PartStatus>('Need to Order');
-  const [vendor, setVendor] = useState('');
-  const [partNumber, setPartNumber] = useState('');
   const [estimatedCost, setEstimatedCost] = useState('');
   const [actualCost, setActualCost] = useState('');
+  const [vendor, setVendor] = useState('');
+  const [status, setStatus] = useState<PartStatus>('Need to Order');
+  const [system, setSystem] = useState(workAreas[0] || 'General');
   const [description, setDescription] = useState('');
 
-  useMemo(() => {
-    if (!part) return;
-    setName(part.name);
-    setSystem(part.system || 'General');
-    setStatus(part.status);
-    setVendor(part.vendor || '');
-    setPartNumber(part.partNumber || '');
-    setEstimatedCost(part.estimatedCost ? String(part.estimatedCost) : '');
-    setActualCost(part.actualCost ? String(part.actualCost) : '');
-    setDescription(part.description || part.notes || '');
-  }, [part]);
+  useEffect(() => {
+    if (!visible) return;
+
+    if (mode === 'edit' && part) {
+      setName(part.name || '');
+      setEstimatedCost(part.estimatedCost ? String(part.estimatedCost) : '');
+      setActualCost(part.actualCost ? String(part.actualCost) : '');
+      setVendor(part.vendor || '');
+      setStatus(part.status === 'On Hand' ? 'Received' : part.status);
+      setSystem(part.system || workAreas[0] || 'General');
+      setDescription(part.description || part.notes || '');
+      return;
+    }
+
+    setName('');
+    setEstimatedCost('');
+    setActualCost('');
+    setVendor('');
+    setStatus('Need to Order');
+    setSystem(workAreas[0] || 'General');
+    setDescription('');
+  }, [mode, part, visible, workAreas]);
 
   const save = () => {
-    if (!part || !name.trim()) return;
+    if (!name.trim()) {
+      Alert.alert('Part name required', 'Add a part name before saving.');
+      return;
+    }
 
     onSave({
       name: name.trim(),
-      system: system.trim() || 'General',
-      status,
-      vendor: vendor.trim() || undefined,
-      partNumber: partNumber.trim() || undefined,
       estimatedCost: parseMoney(estimatedCost),
       actualCost: parseMoney(actualCost),
+      vendor: vendor.trim() || undefined,
+      status,
+      system: system.trim() || 'General',
       description: description.trim() || undefined,
     });
   };
 
   return (
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={onClose}
-    >
-      <View style={styles.modalShade}>
-        <Pressable
-          style={styles.modalBackdrop}
-          onPress={onClose}
-        />
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <View style={styles.sheetOverlay}>
+        <Pressable style={styles.sheetBackdrop} onPress={onClose} />
 
         <View style={styles.sheet}>
           <View style={styles.sheetHandle} />
-
           <View style={styles.sheetHeader}>
             <View>
-              <Label>EDIT PART</Label>
-              <Title style={styles.sheetTitle}>
-                Update part details
-              </Title>
+              <Label>{mode === 'add' ? 'ADD PART' : 'EDIT PART'}</Label>
+              <Title style={styles.sheetTitle}>{mode === 'add' ? 'Part details' : 'Update part'}</Title>
             </View>
-
-            <Pressable
-              onPress={onClose}
-              style={styles.closeButton}
-            >
-              <MaterialCommunityIcons
-                name="close"
-                size={22}
-                color={colors.white}
-              />
+            <Pressable style={styles.sheetClose} onPress={onClose}>
+              <MaterialCommunityIcons name="close" size={22} color={colors.white} />
             </Pressable>
           </View>
 
-          <ScrollView
-            keyboardShouldPersistTaps="handled"
-            showsVerticalScrollIndicator={false}
-          >
+          <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <TextInput
               value={name}
               onChangeText={setName}
-              placeholder="Part name"
-              placeholderTextColor={colors.steel}
-              style={styles.input}
-            />
-
-            <TextInput
-              value={system}
-              onChangeText={setSystem}
-              placeholder="Work area / system"
-              placeholderTextColor={colors.steel}
-              style={styles.input}
-            />
-
-            <Label>Status</Label>
-            <View style={styles.chipWrap}>
-              {partStatuses.map(item => (
-                <Chip
-                  key={item}
-                  label={visibleStatus(item)}
-                  active={status === item}
-                  onPress={() => setStatus(item)}
-                />
-              ))}
-            </View>
-
-            <TextInput
-              value={vendor}
-              onChangeText={setVendor}
-              placeholder="Vendor"
-              placeholderTextColor={colors.steel}
-              style={styles.input}
-            />
-
-            <TextInput
-              value={partNumber}
-              onChangeText={setPartNumber}
-              placeholder="Part number"
+              placeholder="Part Name"
               placeholderTextColor={colors.steel}
               style={styles.input}
             />
@@ -353,60 +413,66 @@ function PartEditModal({
               <TextInput
                 value={estimatedCost}
                 onChangeText={setEstimatedCost}
-                placeholder="Estimated"
+                placeholder="Estimated Cost"
                 placeholderTextColor={colors.steel}
                 keyboardType="numeric"
-                style={[
-                  styles.input,
-                  styles.colInput,
-                ]}
+                style={[styles.input, styles.twoColInput]}
               />
-
               <TextInput
                 value={actualCost}
                 onChangeText={setActualCost}
-                placeholder="Actual"
+                placeholder="Actual Cost"
                 placeholderTextColor={colors.steel}
                 keyboardType="numeric"
-                style={[
-                  styles.input,
-                  styles.colInput,
-                ]}
+                style={[styles.input, styles.twoColInput]}
               />
             </View>
 
             <TextInput
-              value={description}
-              onChangeText={setDescription}
-              placeholder="Description or notes"
+              value={vendor}
+              onChangeText={setVendor}
+              placeholder="Vendor optional"
               placeholderTextColor={colors.steel}
-              multiline
-              style={[
-                styles.input,
-                styles.notesInput,
-              ]}
+              style={styles.input}
             />
 
-            <View style={styles.sheetActions}>
-              <Button
-                title="Save Changes"
-                onPress={save}
-              />
+            <SelectField
+              label="STATUS"
+              value={displayStatus(status)}
+              options={['Needed', 'Ordered', 'Received', 'Installed']}
+              onChange={value => {
+                if (value === 'Needed') setStatus('Need to Order');
+                else setStatus(value as PartStatus);
+              }}
+            />
 
-              <Pressable
-                onPress={onDelete}
-                style={styles.deleteButton}
-              >
-                <MaterialCommunityIcons
-                  name="trash-can-outline"
-                  size={18}
-                  color={colors.red}
-                />
-                <AppText style={styles.deleteText}>
-                  Delete Part
-                </AppText>
+            <SelectField
+              label="WORK AREA"
+              value={system}
+              options={workAreas}
+              onChange={setSystem}
+            />
+
+            <TextInput
+              value={description}
+              onChangeText={setDescription}
+              placeholder="Description"
+              placeholderTextColor={colors.steel}
+              multiline
+              style={[styles.input, styles.descriptionInput]}
+            />
+
+            <Pressable style={styles.saveButton} onPress={save}>
+              <MaterialCommunityIcons name="content-save-outline" size={18} color={colors.white} />
+              <AppText style={styles.saveButtonText}>{mode === 'add' ? 'Add Part' : 'Save Changes'}</AppText>
+            </Pressable>
+
+            {mode === 'edit' && onDelete ? (
+              <Pressable style={styles.deleteButton} onPress={onDelete}>
+                <MaterialCommunityIcons name="trash-can-outline" size={18} color={colors.red} />
+                <AppText style={styles.deleteText}>Delete Part</AppText>
               </Pressable>
-            </View>
+            ) : null}
           </ScrollView>
         </View>
       </View>
@@ -416,305 +482,280 @@ function PartEditModal({
 
 export function PartsScreen() {
   const store = useFabricatorStore();
-  const [name, setName] = useState('');
-  const [system, setSystem] = useState('Chassis');
+  const project = store.activeProject();
+  const workAreas = useMemo(() => getWorkAreas(project?.category), [project?.category]);
+
   const [filter, setFilter] = useState<PartFilter>('Needed');
+  const [addOpen, setAddOpen] = useState(false);
   const [editingPart, setEditingPart] = useState<Part | null>(null);
 
-  const parts = store.parts.filter(
-    (part: Part) =>
-      part.projectId === store.selectedProjectId
-  );
+  const parts = store.parts.filter((part: Part) => part.projectId === store.selectedProjectId);
+  const visibleParts = parts.filter((part: Part) => filterMatches(part, filter));
 
-  const visibleParts = useMemo(() => {
-    if (filter === 'All') return parts;
-    if (filter === 'Needed') {
-      return parts.filter(
-        (part: Part) => part.status === 'Need to Order'
-      );
+  const counts = useMemo(() => ({
+    Needed: parts.filter((part: Part) => part.status === 'Need to Order').length,
+    Ordered: parts.filter((part: Part) => part.status === 'Ordered').length,
+    Received: parts.filter((part: Part) => part.status === 'Received' || part.status === 'On Hand').length,
+    Installed: parts.filter((part: Part) => part.status === 'Installed').length,
+    All: parts.length,
+  }), [parts]);
+
+  const estimatedTotal = parts.reduce((sum: number, part: Part) => sum + (part.estimatedCost || 0), 0);
+  const actualTotal = parts.reduce((sum: number, part: Part) => sum + (part.actualCost || 0), 0);
+  const remainingTotal = Math.max(estimatedTotal - actualTotal, 0);
+
+  const saveNewPart = (data: {
+    name: string;
+    estimatedCost?: number;
+    actualCost?: number;
+    vendor?: string;
+    status: PartStatus;
+    system: string;
+    description?: string;
+  }) => {
+    store.addPart(
+      data.name,
+      data.system,
+      data.vendor,
+      undefined,
+      data.description,
+      data.estimatedCost,
+      data.actualCost
+    );
+
+    if (data.status !== 'Need to Order') {
+      const created = useFabricatorStore
+        .getState()
+        .parts.find((part: Part) => part.projectId === store.selectedProjectId && part.name === data.name);
+
+      if (created) {
+        useFabricatorStore.getState().updatePart(created.id, { status: data.status });
+      }
     }
 
-    return parts.filter(
-      (part: Part) => part.status === filter
-    );
-  }, [filter, parts]);
-
-  const totalEstimated = parts.reduce(
-    (sum: number, part: Part) =>
-      sum + (part.estimatedCost || 0),
-    0
-  );
-
-  const totalActual = parts.reduce(
-    (sum: number, part: Part) =>
-      sum + (part.actualCost || 0),
-    0
-  );
-
-  const counts = {
-    Needed: parts.filter(
-      (part: Part) => part.status === 'Need to Order'
-    ).length,
-    Ordered: parts.filter(
-      (part: Part) => part.status === 'Ordered'
-    ).length,
-    'On Hand': parts.filter(
-      (part: Part) => part.status === 'On Hand'
-    ).length,
-    Installed: parts.filter(
-      (part: Part) => part.status === 'Installed'
-    ).length,
-    All: parts.length,
+    setAddOpen(false);
   };
 
-  const save = () => {
-    if (!name.trim()) return;
-    store.addPart(name.trim(), system.trim() || 'General');
-    setName('');
-    setSystem('Chassis');
-  };
-
-  const saveEdit = (updates: Partial<Part>) => {
+  const saveExistingPart = (data: {
+    name: string;
+    estimatedCost?: number;
+    actualCost?: number;
+    vendor?: string;
+    status: PartStatus;
+    system: string;
+    description?: string;
+  }) => {
     if (!editingPart) return;
-    store.updatePart(editingPart.id, updates);
+
+    store.updatePart(editingPart.id, {
+      name: data.name,
+      estimatedCost: data.estimatedCost,
+      actualCost: data.actualCost,
+      vendor: data.vendor,
+      status: data.status,
+      system: data.system,
+      description: data.description,
+    });
+
     setEditingPart(null);
   };
 
-  const deleteEdit = () => {
+  const deleteEditingPart = () => {
     if (!editingPart) return;
-    store.deletePart(editingPart.id);
-    setEditingPart(null);
+
+    Alert.alert('Delete part?', `Remove ${editingPart.name} from this project?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          store.deletePart(editingPart.id);
+          setEditingPart(null);
+        },
+      },
+    ]);
   };
 
   return (
     <Screen>
-      <View style={styles.compactHero}>
-        <View style={{ flex: 1 }}>
-          <Label>PARTS</Label>
-          <Title style={styles.heroTitle}>
-            Parts + Materials
-          </Title>
-          <AppText style={styles.heroCopy}>
-            Compact tracking for what is needed, ordered, on hand, and installed.
-          </AppText>
-        </View>
-      </View>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
+        <View style={styles.headerRow}>
+          <View style={styles.headerTextWrap}>
+            <Label>PARTS</Label>
+            <Title style={styles.headerTitle}>Parts List</Title>
+            <AppText style={styles.headerCopy}>Track what is needed, ordered, received, and installed.</AppText>
+          </View>
 
-      <Card style={styles.quickAddCard}>
-        <View style={styles.quickAddRow}>
-          <TextInput
-            value={name}
-            onChangeText={setName}
-            placeholder="Part, material, or hardware…"
-            placeholderTextColor={colors.steel}
-            style={styles.quickInput}
-            returnKeyType="done"
-            onSubmitEditing={save}
-          />
-
-          <Pressable
-            onPress={save}
-            style={styles.addButton}
-          >
-            <MaterialCommunityIcons
-              name="plus"
-              size={22}
-              color={colors.white}
-            />
+          <Pressable style={styles.addButton} onPress={() => setAddOpen(true)}>
+            <MaterialCommunityIcons name="plus" size={24} color={colors.white} />
           </Pressable>
         </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalChips}
-        >
-          {baseSystems.map(item => (
-            <Chip
-              key={item}
-              label={item}
-              active={system === item}
-              onPress={() => setSystem(item)}
-            />
-          ))}
-        </ScrollView>
-      </Card>
+        <Card style={styles.summaryCard}>
+          <View style={styles.summaryGrid}>
+            {PART_FILTERS.slice(0, 4).map((item: PartFilter) => (
+              <SummaryTile
+                key={item}
+                label={item}
+                value={counts[item]}
+                active={filter === item}
+                onPress={() => setFilter(item)}
+              />
+            ))}
+          </View>
 
-      <View style={styles.budgetStrip}>
-        <View style={styles.budgetCell}>
-          <Label>EST</Label>
-          <AppText style={styles.budgetValue}>
-            {money(totalEstimated)}
-          </AppText>
-        </View>
-
-        <View style={styles.budgetCell}>
-          <Label>ACTUAL</Label>
-          <AppText style={styles.budgetValue}>
-            {money(totalActual)}
-          </AppText>
-        </View>
-
-        <View style={styles.budgetCell}>
-          <Label>ITEMS</Label>
-          <AppText style={styles.budgetValue}>
-            {parts.length}
-          </AppText>
-        </View>
-      </View>
-
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        contentContainerStyle={styles.filterRow}
-      >
-        {partFilters.map(item => (
-          <Pressable
-            key={item}
-            onPress={() => setFilter(item)}
-            style={[
-              styles.filterButton,
-              filter === item && styles.filterButtonActive,
-            ]}
-          >
-            <AppText
-              style={[
-                styles.filterText,
-                filter === item && styles.filterTextActive,
-              ]}
-            >
-              {item}
-            </AppText>
-
-            <View style={styles.filterCount}>
-              <AppText style={styles.filterCountText}>
-                {counts[item]}
-              </AppText>
+          <View style={styles.budgetRow}>
+            <View style={styles.budgetPill}>
+              <Label>ESTIMATED</Label>
+              <AppText style={styles.budgetValue}>{money(estimatedTotal)}</AppText>
             </View>
+            <View style={styles.budgetPill}>
+              <Label>ACTUAL</Label>
+              <AppText style={styles.budgetValue}>{money(actualTotal)}</AppText>
+            </View>
+            <View style={styles.budgetPill}>
+              <Label>REMAINING</Label>
+              <AppText style={styles.budgetValue}>{money(remainingTotal)}</AppText>
+            </View>
+          </View>
+        </Card>
+
+        <Pressable style={styles.addPartCard} onPress={() => setAddOpen(true)}>
+          <View style={styles.addPartIcon}>
+            <MaterialCommunityIcons name="package-variant-plus" size={22} color={colors.orange} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <AppText style={styles.addPartTitle}>Add Part</AppText>
+            <AppText style={styles.addPartCopy}>Part name, costs, vendor, status, work area, and description.</AppText>
+          </View>
+          <MaterialCommunityIcons name="chevron-right" size={22} color={colors.steel} />
+        </Pressable>
+
+        <View style={styles.listHeader}>
+          <View>
+            <Label>{filter.toUpperCase()}</Label>
+            <Title style={styles.listTitle}>{visibleParts.length} parts</Title>
+          </View>
+          <Pressable style={styles.allButton} onPress={() => setFilter(filter === 'All' ? 'Needed' : 'All')}>
+            <AppText style={styles.allButtonText}>{filter === 'All' ? 'Needed' : 'All'}</AppText>
           </Pressable>
-        ))}
+        </View>
+
+        {visibleParts.length ? (
+          visibleParts.map((part: Part) => (
+            <PartCard
+              key={part.id}
+              part={part}
+              category={project?.category}
+              onEdit={() => setEditingPart(part)}
+            />
+          ))
+        ) : (
+          <Card style={styles.emptyCard}>
+            <MaterialCommunityIcons name="package-variant" size={38} color={colors.orange} />
+            <Title style={styles.emptyTitle}>No parts here</Title>
+            <AppText style={styles.emptyCopy}>Add a part or switch to All to review the full parts list.</AppText>
+          </Card>
+        )}
       </ScrollView>
 
-      {visibleParts.length ? (
-        visibleParts.map((part: Part) => (
-          <PartRow
-            key={part.id}
-            part={part}
-            onAdvance={() =>
-              store.updatePart(part.id, {
-                status: nextPartStatus(part.status),
-              })
-            }
-            onEdit={() => setEditingPart(part)}
-          />
-        ))
-      ) : (
-        <Card style={styles.emptyCard}>
-          <AppText>No parts here yet.</AppText>
-        </Card>
-      )}
-
-      <PartEditModal
-        visible={!!editingPart}
-        part={editingPart}
-        onClose={() => setEditingPart(null)}
-        onSave={saveEdit}
-        onDelete={deleteEdit}
+      <PartFormSheet
+        visible={addOpen}
+        mode="add"
+        part={null}
+        workAreas={workAreas}
+        onClose={() => setAddOpen(false)}
+        onSave={saveNewPart}
       />
 
-      <View style={{ height: 90 }} />
+      <PartFormSheet
+        visible={!!editingPart}
+        mode="edit"
+        part={editingPart}
+        workAreas={workAreas}
+        onClose={() => setEditingPart(null)}
+        onSave={saveExistingPart}
+        onDelete={deleteEditingPart}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  compactHero: {
-    backgroundColor: colors.panelHigh,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: 12,
+  content: {
+    paddingBottom: 96,
   },
-  heroTitle: {
-    fontSize: 27,
-    lineHeight: 31,
-  },
-  heroCopy: {
-    color: colors.steel,
-    marginTop: 4,
-    fontSize: 12,
-    lineHeight: 17,
-  },
-  quickAddCard: {
-    padding: spacing.md,
-    borderColor: 'rgba(217,106,29,0.32)',
-    marginBottom: 12,
-  },
-  quickAddRow: {
+  headerRow: {
     flexDirection: 'row',
-    gap: 8,
     alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 14,
+    marginBottom: 12,
   },
-  quickInput: {
+  headerTextWrap: {
     flex: 1,
-    color: colors.white,
-    backgroundColor: colors.graphite,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: radius.md,
-    paddingHorizontal: 13,
-    paddingVertical: 11,
-    fontSize: 15,
-    fontWeight: '700',
+  },
+  headerTitle: {
+    fontSize: 30,
+    lineHeight: 34,
+    marginTop: 4,
+  },
+  headerCopy: {
+    color: colors.steel,
+    marginTop: 5,
+    lineHeight: 19,
   },
   addButton: {
-    width: 46,
-    height: 46,
-    borderRadius: 14,
+    width: 48,
+    height: 48,
+    borderRadius: 16,
     backgroundColor: colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  horizontalChips: {
-    gap: 8,
-    paddingTop: 11,
-  },
-  chipWrap: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 8,
+  summaryCard: {
+    borderColor: 'rgba(217,106,29,0.32)',
     marginBottom: 12,
   },
-  chip: {
-    backgroundColor: colors.charcoal,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingVertical: 7,
-    paddingHorizontal: 11,
+  summaryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 9,
   },
-  chipActive: {
+  summaryTile: {
+    width: '48.5%',
+    minHeight: 80,
+    borderRadius: radius.md,
+    backgroundColor: colors.charcoal,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: 12,
+    justifyContent: 'center',
+  },
+  summaryTileActive: {
     backgroundColor: colors.orangeSoft,
     borderColor: colors.orange,
   },
-  chipText: {
-    fontSize: 11,
-    color: colors.muted,
-    fontWeight: '800',
+  summaryValue: {
+    fontSize: 27,
+    lineHeight: 30,
   },
-  chipTextActive: {
+  summaryLabel: {
+    color: colors.steel,
+    fontWeight: '900',
+    marginTop: 4,
+  },
+  summaryLabelActive: {
     color: colors.white,
   },
-  budgetStrip: {
+  budgetRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 12,
+    marginTop: 12,
   },
-  budgetCell: {
+  budgetPill: {
     flex: 1,
-    backgroundColor: colors.panel,
+    backgroundColor: colors.graphite,
     borderColor: colors.line,
     borderWidth: 1,
     borderRadius: radius.md,
@@ -725,213 +766,336 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     marginTop: 4,
   },
-  filterRow: {
-    gap: 8,
-    paddingBottom: 12,
-  },
-  filterButton: {
+  addPartCard: {
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.panel,
+    padding: spacing.md,
+    marginBottom: 14,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 7,
-    backgroundColor: colors.panel,
-    borderColor: colors.line,
-    borderWidth: 1,
-    borderRadius: 999,
-    paddingVertical: 8,
-    paddingHorizontal: 11,
+    gap: 12,
   },
-  filterButtonActive: {
+  addPartIcon: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: colors.orangeSoft,
-    borderColor: colors.orange,
-  },
-  filterText: {
-    color: colors.steel,
-    fontSize: 11,
-    fontWeight: '900',
-  },
-  filterTextActive: {
-    color: colors.white,
-  },
-  filterCount: {
-    minWidth: 22,
-    alignItems: 'center',
-    borderRadius: 999,
-    paddingVertical: 2,
-    paddingHorizontal: 6,
-    backgroundColor: colors.graphite,
-  },
-  filterCountText: {
-    color: colors.white,
-    fontSize: 10,
-    fontWeight: '900',
-  },
-  partRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    backgroundColor: colors.panel,
-    borderColor: colors.line,
     borderWidth: 1,
-    borderRadius: radius.md,
-    padding: 11,
-    marginBottom: 8,
-    minHeight: 72,
+    borderColor: 'rgba(217,106,29,0.35)',
   },
-  installedRow: {
-    opacity: 0.72,
+  addPartTitle: {
+    color: colors.white,
+    fontSize: 17,
+    fontWeight: '900',
   },
-  pressed: {
-    opacity: 0.78,
-    transform: [{ scale: 0.99 }],
+  addPartCopy: {
+    color: colors.steel,
+    fontSize: 12,
+    marginTop: 3,
+    lineHeight: 17,
   },
-  partBody: {
-    flex: 1,
-  },
-  partTop: {
+  listHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+    alignItems: 'flex-end',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  listTitle: {
+    fontSize: 24,
+    lineHeight: 29,
+  },
+  allButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.charcoal,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  allButtonText: {
+    color: colors.orange,
+    fontWeight: '900',
+    fontSize: 12,
+  },
+  partCard: {
+    marginBottom: 10,
+    padding: spacing.md,
+  },
+  partHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
+  partTitleWrap: {
+    flex: 1,
   },
   partTitle: {
-    flex: 1,
     color: colors.white,
-    fontSize: 15,
-    fontWeight: '900',
-  },
-  statusPill: {
-    backgroundColor: colors.orangeSoft,
-    borderRadius: 999,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-  },
-  statusText: {
-    color: colors.orange,
-    fontSize: 10,
+    fontSize: 18,
     fontWeight: '900',
   },
   partMeta: {
-    flexDirection: 'row',
-    gap: 8,
-    marginTop: 5,
-  },
-  systemText: {
     color: colors.steel,
-    fontSize: 11,
-    fontWeight: '800',
-  },
-  vendorText: {
-    color: colors.muted,
-    fontSize: 11,
+    marginTop: 5,
+    fontSize: 12,
     fontWeight: '700',
-    flex: 1,
+  },
+  statusBadge: {
+    borderRadius: 999,
+    backgroundColor: colors.orangeSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(217,106,29,0.35)',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  statusText: {
+    color: colors.white,
+    fontSize: 11,
+    fontWeight: '900',
+  },
+  descriptionText: {
+    color: colors.muted,
+    marginTop: 10,
+    lineHeight: 19,
   },
   costRow: {
     flexDirection: 'row',
-    gap: 12,
-    marginTop: 6,
+    gap: 8,
+    marginTop: 12,
   },
-  costText: {
+  costPill: {
+    flex: 1,
+    backgroundColor: colors.charcoal,
+    borderWidth: 1,
+    borderColor: colors.line,
+    borderRadius: radius.md,
+    padding: 10,
+  },
+  costValue: {
     color: colors.white,
-    fontSize: 11,
-    fontWeight: '800',
+    fontWeight: '900',
+    marginTop: 4,
   },
-  iconStack: {
+  cardActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginTop: 12,
+  },
+  cardActionButton: {
+    flex: 1,
+    minHeight: 42,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.charcoal,
+    alignItems: 'center',
+    justifyContent: 'center',
     flexDirection: 'row',
     gap: 7,
   },
-  iconButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 10,
-    backgroundColor: colors.charcoal,
-    borderColor: colors.line,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
+  cardActionText: {
+    color: colors.orange,
+    fontWeight: '900',
+    fontSize: 12,
   },
   emptyCard: {
-    padding: spacing.md,
+    alignItems: 'center',
+    padding: spacing.xl,
   },
-  modalShade: {
+  emptyTitle: {
+    fontSize: 22,
+    lineHeight: 27,
+    marginTop: 12,
+  },
+  emptyCopy: {
+    textAlign: 'center',
+    color: colors.steel,
+    marginTop: 8,
+    lineHeight: 20,
+  },
+  sheetOverlay: {
     flex: 1,
     justifyContent: 'flex-end',
-    backgroundColor: 'rgba(0,0,0,0.6)',
+    backgroundColor: 'rgba(0,0,0,0.58)',
   },
-  modalBackdrop: {
+  sheetBackdrop: {
     ...StyleSheet.absoluteFillObject,
   },
   sheet: {
-    maxHeight: '84%',
+    maxHeight: '88%',
     backgroundColor: colors.panelHigh,
     borderTopLeftRadius: radius.xl,
     borderTopRightRadius: radius.xl,
-    padding: spacing.lg,
-    borderColor: colors.line,
     borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.lg,
   },
   sheetHandle: {
-    alignSelf: 'center',
-    width: 44,
-    height: 4,
+    width: 54,
+    height: 5,
     borderRadius: 999,
     backgroundColor: colors.line,
+    alignSelf: 'center',
     marginBottom: 14,
   },
   sheetHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 12,
-    marginBottom: 14,
+    alignItems: 'center',
+    marginBottom: 12,
   },
   sheetTitle: {
-    fontSize: 24,
-    lineHeight: 29,
+    fontSize: 25,
+    lineHeight: 30,
   },
-  closeButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    backgroundColor: colors.charcoal,
+  sheetClose: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: colors.charcoal,
+    borderWidth: 1,
+    borderColor: colors.line,
   },
   input: {
     color: colors.white,
-    backgroundColor: colors.graphite,
+    backgroundColor: colors.charcoal,
     borderColor: colors.line,
     borderWidth: 1,
     borderRadius: radius.md,
     padding: spacing.md,
-    marginBottom: 11,
+    marginBottom: 10,
   },
   twoCol: {
     flexDirection: 'row',
-    gap: 9,
+    gap: 10,
   },
-  colInput: {
+  twoColInput: {
     flex: 1,
   },
-  notesInput: {
-    minHeight: 90,
+  descriptionInput: {
+    minHeight: 92,
     textAlignVertical: 'top',
   },
-  sheetActions: {
-    gap: 10,
-    paddingBottom: 12,
-  },
-  deleteButton: {
-    borderColor: 'rgba(181,91,85,0.45)',
-    borderWidth: 1,
+  selectField: {
+    minHeight: 58,
     borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
     backgroundColor: colors.charcoal,
-    paddingVertical: 13,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 10,
+  },
+  selectValue: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '900',
+    marginTop: 3,
+  },
+  saveButton: {
+    minHeight: 52,
+    borderRadius: radius.md,
+    backgroundColor: colors.orange,
     alignItems: 'center',
     justifyContent: 'center',
     flexDirection: 'row',
-    gap: 7,
+    gap: 8,
+    marginTop: 2,
+  },
+  saveButtonText: {
+    color: colors.white,
+    fontWeight: '900',
+  },
+  deleteButton: {
+    minHeight: 48,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(181,91,85,0.55)',
+    backgroundColor: '#351311',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
   },
   deleteText: {
     color: colors.red,
     fontWeight: '900',
+  },
+  dropdownOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.55)',
+  },
+  dropdownBackdrop: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  dropdownCard: {
+    maxHeight: '70%',
+    backgroundColor: colors.panelHigh,
+    borderTopLeftRadius: radius.xl,
+    borderTopRightRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: colors.line,
+    padding: spacing.lg,
+  },
+  dropdownHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  dropdownTitle: {
+    fontSize: 24,
+    lineHeight: 29,
+  },
+  dropdownClose: {
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.charcoal,
+    borderWidth: 1,
+    borderColor: colors.line,
+  },
+  optionRow: {
+    minHeight: 52,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    backgroundColor: colors.charcoal,
+    paddingHorizontal: spacing.md,
+    marginBottom: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  optionRowSelected: {
+    backgroundColor: colors.orangeSoft,
+    borderColor: colors.orange,
+  },
+  optionText: {
+    color: colors.white,
+    fontWeight: '800',
+  },
+  optionTextSelected: {
+    color: colors.white,
+    fontWeight: '900',
+  },
+  pressed: {
+    opacity: 0.82,
+    transform: [{ scale: 0.99 }],
   },
 });
