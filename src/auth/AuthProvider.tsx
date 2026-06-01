@@ -23,10 +23,22 @@ export function AuthProvider({
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session ?? null);
-      setIsLoading(false);
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data, error }) => {
+        console.log('getSession result', {
+          hasSession: !!data?.session,
+          error,
+        });
+
+        setSession(data?.session ?? null);
+      })
+      .catch((err) => {
+        console.error('getSession crash', err);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
 
     const {
       data: { subscription },
