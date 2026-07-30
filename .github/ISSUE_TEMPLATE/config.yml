@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Howard OS Operating Records
+    url: https://github.com/hsparksjr1980-stack/fabricator/tree/main/docs/howard-os
+    about: Review operating rules before opening Fabricator tasks.

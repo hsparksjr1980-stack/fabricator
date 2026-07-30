@@ -1,0 +1,87 @@
+name: Product Task
+description: Approved weekly Fabricator product task
+title: "[Product]: "
+labels:
+  - product
+  - howard-os
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What builder problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: current_behavior
+    attributes:
+      label: Current behavior
+    validations:
+      required: true
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+    validations:
+      required: true
+  - type: textarea
+    id: out_of_scope
+    attributes:
+      label: Out of scope
+    validations:
+      required: true
+  - type: dropdown
+    id: risk_level
+    attributes:
+      label: Risk level
+      options:
+        - Low
+        - Medium
+        - High
+    validations:
+      required: true
+  - type: input
+    id: weekly_cycle
+    attributes:
+      label: Weekly cycle
+    validations:
+      required: true
+  - type: dropdown
+    id: current_stage
+    attributes:
+      label: Current stage
+      options:
+        - PROPOSED
+        - ENGINEERING REVIEWED
+        - PRODUCT SELECTED
+        - CEO CONFIRMED
+        - IN PROGRESS
+        - AGENT REVIEW
+        - FIXES
+        - RELEASE READY
+        - HOWARD REVIEW
+        - APPROVED
+        - MERGED
+        - COMPLETE
+    validations:
+      required: true
+  - type: input
+    id: approval_status
+    attributes:
+      label: Approval status
+    validations:
+      required: true
+  - type: input
+    id: related_pr
+    attributes:
+      label: Related pull request
+  - type: textarea
+    id: blockers
+    attributes:
+      label: Blockers
