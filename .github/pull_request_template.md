@@ -67,5 +67,3 @@
 
 
 ## Howard Approval Status
-
-
