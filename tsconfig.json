@@ -10,6 +10,9 @@
   },
   "exclude": [
     "node_modules",
+    "fabricator-app",
+    "fabricator-app-messy-backup",
+    "fabricator-app.worktrees",
     "supabase/functions",
     "dist",
     "server.ts",

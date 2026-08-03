@@ -1,0 +1,93 @@
+name: Marketing Task
+description: Approved weekly Fabricator marketing task
+title: "[Marketing]: "
+labels:
+  - marketing
+  - howard-os
+body:
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+    validations:
+      required: true
+  - type: input
+    id: audience
+    attributes:
+      label: Audience
+    validations:
+      required: true
+  - type: textarea
+    id: deliverable
+    attributes:
+      label: Deliverable
+    validations:
+      required: true
+  - type: textarea
+    id: primary_message
+    attributes:
+      label: Primary message
+    validations:
+      required: true
+  - type: input
+    id: call_to_action
+    attributes:
+      label: Call to action
+    validations:
+      required: true
+  - type: input
+    id: distribution_channel
+    attributes:
+      label: Distribution channel
+    validations:
+      required: true
+  - type: textarea
+    id: claims_concerns
+    attributes:
+      label: Claims concerns
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: Acceptance criteria
+    validations:
+      required: true
+  - type: input
+    id: weekly_cycle
+    attributes:
+      label: Weekly cycle
+    validations:
+      required: true
+  - type: dropdown
+    id: current_stage
+    attributes:
+      label: Current stage
+      options:
+        - PROPOSED
+        - MARKETING SELECTED
+        - CEO CONFIRMED
+        - IN PROGRESS
+        - AGENT REVIEW
+        - FIXES
+        - RELEASE READY
+        - HOWARD REVIEW
+        - APPROVED
+        - PUBLISHING QUEUE
+        - COMPLETE
+    validations:
+      required: true
+  - type: input
+    id: approval_status
+    attributes:
+      label: Approval status
+    validations:
+      required: true
+  - type: input
+    id: related_pr
+    attributes:
+      label: Related pull request
+  - type: textarea
+    id: blockers
+    attributes:
+      label: Blockers

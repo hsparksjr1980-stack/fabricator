@@ -12,6 +12,9 @@ npm-debug.*
 web-build/
 .env
 .env.local
+.env.*
+!.env.example
+!.env.*.example
 .env.*.local
 
 # Node dependencies
@@ -47,9 +50,37 @@ dist/
 
 # Testing
 coverage/
+test-results/
+playwright-report/
 .nyc_output/
 
 # Development
 .cache/
 temp/
 tmp/
+
+# Local-only legacy folders
+fabricator-app/
+fabricator-app-messy-backup/
+fabricator-app.worktrees/
+
+# Local databases and uploads
+*.db
+*.sqlite
+*.sqlite3
+uploads/
+
+# iOS generated/local state
+ios/Pods/
+ios/build/
+ios/DerivedData/
+ios/*.xcworkspace/xcuserdata/
+ios/*.xcodeproj/xcuserdata/
+.xcode.env.local
+
+# Android generated/local state
+android/.gradle/
+android/build/
+android/app/build/
+*.apk
+*.aab
