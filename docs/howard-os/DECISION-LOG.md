@@ -13,3 +13,5 @@ Record meaningful product, architecture, security, pricing, release, and marketi
 - Keep root `package-lock.json` tracked.
 - Treat root `ios/` and `android/` as authoritative tracked native projects.
 - Keep the currently tracked Android debug keystore unchanged for development; it is not approved for production signing.
+- 2026-08-08 Fabricator Post-Approval Action: no explicit current-cycle Howard approval was found for a product PR, deployment, marketing deliverable, publication, sending, spending, pricing, or production activation. No merge, deployment, publication, sending, or publishing-queue action was taken.
+- 2026-08-15 Fabricator Post-Approval Action: no explicit Week of 2026-08-10 Howard approval was found or requested for a product PR, deployment, marketing deliverable, publication, sending, spending, pricing, production activation, app-store submission, customer contact, or paid-service action. No merge, deployment, publication, sending, or publishing-queue action was taken.
