@@ -44,9 +44,9 @@ async function remoteTranscribe(uri:string,durationMs:number):Promise<VoiceCaptu
   const response=await fetch(TRANSCRIBE_ENDPOINT,{method:'POST',body:form});
 
   if(!response.ok){
-    const detail=await readError(response);
+    await readError(response);
     return {
-      transcript:`Supabase transcription failed with status ${response.status}. Details: ${detail}`,
+      transcript:'Transcription was unavailable. Recording was captured, but Fabricator could not create a transcript from the remote service.',
       confidence:0,
       durationMs,
       source:'supabase-error'
@@ -65,8 +65,17 @@ async function remoteTranscribe(uri:string,durationMs:number):Promise<VoiceCaptu
 
 export const mockVoiceTranscriptionService: VoiceTranscriptionService = {
   async transcribe(uri?: string,durationMs:number=0){
-    if(uri){
-      return remoteTranscribe(uri,durationMs);
+    try {
+      if(uri){
+        return remoteTranscribe(uri,durationMs);
+      }
+    } catch {
+      return {
+        transcript:'Transcription was unavailable. Recording was captured, but Fabricator could not create a transcript from the remote service.',
+        confidence:0,
+        durationMs,
+        source:'supabase-error'
+      };
     }
 
     return {

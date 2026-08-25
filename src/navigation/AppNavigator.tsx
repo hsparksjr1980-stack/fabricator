@@ -153,7 +153,7 @@ const activeProject =
           route.name === 'Dashboard' ? null : (
             <Pressable
               style={{ marginLeft: 14 }}
-              onPress={() => console.log('Project modal')}
+              onPress={() => setProjectModalVisible(true)}
             >
               <MaterialCommunityIcons
                 name="view-dashboard"
@@ -204,9 +204,9 @@ const activeProject =
           borderTopWidth: 0,
           borderWidth: 1,
           borderColor: colors.line,
-          height: 78,
-          paddingBottom: 12,
-          paddingTop: 10,
+          height: 86,
+          paddingBottom: 16,
+          paddingTop: 8,
           borderRadius: radius.xl,
         },
 
@@ -217,16 +217,17 @@ const activeProject =
         tabBarHideOnKeyboard: true,
 
         tabBarLabelStyle: {
-          fontSize: 10,
+          fontSize: 9,
           fontWeight: '900',
-          letterSpacing: 0.5,
+          letterSpacing: 0,
+          lineHeight: 12,
         },
 
         tabBarIcon: ({ color, size, focused }) => (
           <MaterialCommunityIcons
             name={tabIcons[route.name]}
             color={color}
-            size={focused ? size + 7 : size + 2}
+            size={focused ? size + 4 : size}
           />
         ),
       })}
@@ -236,6 +237,7 @@ const activeProject =
         component={DashboardScreen}
         options={{
           title: '',
+          tabBarLabel: 'Home',
         }}
       />
 
@@ -258,7 +260,8 @@ const activeProject =
         name="Advisor"
         component={RenderScreen}
         options={{
-          title: 'Shop Assistant',
+          title: 'Shop Help',
+          tabBarLabel: 'Help',
         }}
       />
 

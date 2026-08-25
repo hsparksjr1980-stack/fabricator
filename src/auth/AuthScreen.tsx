@@ -13,8 +13,36 @@ import { AppText, Label, Title } from '@/components/Text';
 import { colors, radius, spacing } from '@/theme/theme';
 import { useAuth } from './AuthProvider';
 
+function friendlyAuthError(error: unknown) {
+  const message =
+    error instanceof Error
+      ? error.message.toLowerCase()
+      : '';
+
+  if (
+    message.includes('fetch') ||
+    message.includes('network') ||
+    message.includes('failed to')
+  ) {
+    return 'Fabricator could not reach account services. Check your connection and try again.';
+  }
+
+  if (
+    message.includes('invalid login') ||
+    message.includes('invalid credentials')
+  ) {
+    return 'That email and password did not match. Check them and try again.';
+  }
+
+  if (message.includes('email')) {
+    return 'Check the email address and try again.';
+  }
+
+  return 'Something went wrong with account access. Please try again.';
+}
+
 export function AuthScreen() {
-  const { signIn, signUp, resetPassword } = useAuth();
+  const { signIn, signUp, resetPassword, authError } = useAuth();
 
   const [mode, setMode] = useState<'signin' | 'signup'>(
     'signin'
@@ -47,10 +75,10 @@ export function AuthScreen() {
       } else {
         await signIn(email, password);
       }
-    } catch (error: any) {
+    } catch (error) {
       Alert.alert(
-        'Authentication Error',
-        error.message ?? 'Something went wrong'
+        'Account access problem',
+        friendlyAuthError(error)
       );
     } finally {
       setLoading(false);
@@ -75,10 +103,10 @@ export function AuthScreen() {
         'Password reset sent',
         'Check your email for password reset instructions.'
       );
-    } catch (error: any) {
+    } catch (error) {
       Alert.alert(
-        'Reset Error',
-        error.message ?? 'Unable to send password reset email.'
+        'Password reset problem',
+        friendlyAuthError(error)
       );
     } finally {
       setLoading(false);
@@ -94,6 +122,17 @@ export function AuthScreen() {
           ? 'Create Account'
           : 'Welcome Back'}
       </Title>
+
+      {authError ? (
+        <View style={styles.backendNotice}>
+          <AppText style={styles.backendNoticeTitle}>
+            Account services unavailable
+          </AppText>
+          <AppText style={styles.backendNoticeText}>
+            {authError}
+          </AppText>
+        </View>
+      ) : null}
 
       <View style={styles.form}>
         <TextInput
@@ -162,6 +201,26 @@ const styles = StyleSheet.create({
   form: {
     marginTop: spacing.xl,
     gap: spacing.md,
+  },
+
+  backendNotice: {
+    marginTop: spacing.lg,
+    backgroundColor: '#2A1612',
+    borderWidth: 1,
+    borderColor: colors.orange,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+
+  backendNoticeTitle: {
+    color: colors.orange,
+    fontWeight: '900',
+    marginBottom: 6,
+  },
+
+  backendNoticeText: {
+    color: colors.white,
+    lineHeight: 20,
   },
 
   input: {

@@ -152,7 +152,7 @@ function ResultCard({ result }: { result: AdvisorStructuredResponse }) {
 
 export function RenderScreen() {
   const [tool, setTool] = useState<AdvisorToolKey>('priority');
-  const [providerKey, setProviderKey] = useState<AdvisorProviderKey>('geminiFlash');
+  const [providerKey, setProviderKey] = useState<AdvisorProviderKey>('localPreview');
   const [missingInformation, setMissingInformation] = useState('');
   const [photoUri, setPhotoUri] = useState('');
   const [customEndpointUrl, setCustomEndpointUrl] = useState('');
@@ -199,10 +199,10 @@ export function RenderScreen() {
     <Screen>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         <Card style={styles.heroPanel}>
-          <Label>AI ADVISOR</Label>
-          <Title style={styles.heroTitle}>Advisor Tools</Title>
+          <Label>SHOP HELP</Label>
+          <Title style={styles.heroTitle}>Shop Help</Title>
           <AppText style={styles.heroCopy}>
-            Not a chatbot. Choose one tool, add only missing information, and get one structured response.
+            Practical planning tools for the next shop session. This build is using local preview output only.
           </AppText>
 
           <View style={styles.contextGrid}>
@@ -228,11 +228,11 @@ export function RenderScreen() {
             <MaterialCommunityIcons name={activeTool.icon} size={28} color={colors.orange} />
           </View>
 
-          <SelectField label="AI PROVIDER" value={providerKey} options={providerOptions} onChange={value => { setProviderKey(value as AdvisorProviderKey); setResult(null); }} />
+          <SelectField label="HELP MODE" value={providerKey} options={providerOptions} onChange={value => { setProviderKey(value as AdvisorProviderKey); setResult(null); }} />
 
           <View style={styles.providerNote}>
             <MaterialCommunityIcons name="shield-key-outline" size={17} color={colors.orange} />
-            <AppText style={styles.providerNoteText}>Fabricator owns context, prompt creation, and response formatting. Provider adapters can be swapped.</AppText>
+            <AppText style={styles.providerNoteText}>No production AI provider is active. Live Shop Help will require approved entitlement, provider, and safety review before launch.</AppText>
           </View>
 
           {providerKey === 'customEndpoint' ? (
@@ -257,7 +257,7 @@ export function RenderScreen() {
 
           <Pressable style={styles.runButton} onPress={runTool} disabled={running}>
             <MaterialCommunityIcons name="auto-fix" size={19} color={colors.white} />
-            <AppText style={styles.runButtonText}>{running ? 'Running Advisor...' : 'Run Advisor Tool'}</AppText>
+            <AppText style={styles.runButtonText}>{running ? 'Preparing Preview...' : 'Preview Shop Help'}</AppText>
           </Pressable>
         </Card>
 
@@ -276,9 +276,9 @@ export function RenderScreen() {
         {result ? <ResultCard result={result} /> : null}
 
         <Card style={styles.architectureCard}>
-          <Label>PROVIDER ARCHITECTURE</Label>
-          <AppText style={styles.architectureLine}>UI → Advisor Service → Provider Adapter → Gemini/OpenAI/Claude/Ollama/Local</AppText>
-          <AppText style={styles.architectureNote}>Gemini Flash is the initial provider target. The mobile app uses a structured preview unless a managed endpoint is configured.</AppText>
+          <Label>RELEASE STATUS</Label>
+          <AppText style={styles.architectureLine}>Local preview only</AppText>
+          <AppText style={styles.architectureNote}>Live Shop Help, production AI providers, billing, and paid entitlements are intentionally disabled until final pre-launch approval.</AppText>
         </Card>
       </ScrollView>
     </Screen>

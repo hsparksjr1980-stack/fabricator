@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
-  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -15,14 +14,13 @@ import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { AppText, Label, Title } from '@/components/Text';
 import { useFabricatorStore } from '@/state/useFabricatorStore';
-import { Part, PartStatus, ProjectCategory } from '@/types/models';
+import { Part, PartStatus, ProjectCategory, normalizePartStatus } from '@/types/models';
 import { colors, radius, shadows, spacing } from '@/theme/theme';
 
 type PartFilter = 'Needed' | 'Ordered' | 'Received' | 'Installed' | 'All';
-type SearchProviderKey = 'google' | 'futureVendor';
 
 const PART_FILTERS: PartFilter[] = ['Needed', 'Ordered', 'Received', 'Installed', 'All'];
-const PART_STATUSES: PartStatus[] = ['Need to Order', 'Ordered', 'Received', 'Installed'];
+const PART_STATUSES: PartStatus[] = ['Needed', 'Ordered', 'Received', 'Installed'];
 
 const WORK_AREAS_BY_CATEGORY: Record<string, string[]> = {
   Vehicle: [
@@ -92,41 +90,17 @@ const WORK_AREAS_BY_CATEGORY: Record<string, string[]> = {
   ],
 };
 
-const SEARCH_PROVIDERS: Record<SearchProviderKey, {
-  key: SearchProviderKey;
-  label: string;
-  buildUrl: (query: string) => string;
-  enabled: boolean;
-}> = {
-  google: {
-    key: 'google',
-    label: 'Google',
-    buildUrl: query => `https://www.google.com/search?q=${encodeURIComponent(query)}`,
-    enabled: true,
-  },
-  futureVendor: {
-    key: 'futureVendor',
-    label: 'Vendor search',
-    buildUrl: query => `https://www.google.com/search?q=${encodeURIComponent(query)}`,
-    enabled: false,
-  },
-};
-
 function getWorkAreas(category?: ProjectCategory | string) {
   return WORK_AREAS_BY_CATEGORY[category || 'General'] || WORK_AREAS_BY_CATEGORY.General;
 }
 
 function displayStatus(status: PartStatus): PartFilter {
-  if (status === 'Need to Order') return 'Needed';
-  if (status === 'On Hand' || status === 'Received') return 'Received';
-  return status;
+  return normalizePartStatus(status);
 }
 
 function filterMatches(part: Part, filter: PartFilter) {
   if (filter === 'All') return true;
-  if (filter === 'Needed') return part.status === 'Need to Order';
-  if (filter === 'Received') return part.status === 'Received' || part.status === 'On Hand';
-  return part.status === filter;
+  return normalizePartStatus(part.status) === filter;
 }
 
 function money(value?: number) {
@@ -141,27 +115,11 @@ function parseMoney(value: string) {
   return Number.isFinite(parsed) ? parsed : undefined;
 }
 
-function buildPartSearchQuery(part: Partial<Part>, category?: ProjectCategory | string) {
-  return [
-    category,
-    part.system,
-    part.name,
-    part.partNumber,
-    part.vendor,
-    part.description,
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .trim();
-}
-
-function openPartSearch(part: Partial<Part>, category?: ProjectCategory | string, providerKey: SearchProviderKey = 'google') {
-  const provider = SEARCH_PROVIDERS[providerKey];
-  const query = buildPartSearchQuery(part, category);
-
-  if (!query || !provider.enabled) return;
-
-  Linking.openURL(provider.buildUrl(query));
+function showPricingUnavailable() {
+  Alert.alert(
+    'Pricing search is not live yet',
+    'Part pricing search is planned as a paid Shop Help feature before public launch.\n\nPrices and availability can change. Verify with the seller before buying.'
+  );
 }
 
 function SelectField({
@@ -258,11 +216,9 @@ function SummaryTile({
 
 function PartCard({
   part,
-  category,
   onEdit,
 }: {
   part: Part;
-  category?: ProjectCategory | string;
   onEdit: () => void;
 }) {
   return (
@@ -296,9 +252,9 @@ function PartCard({
       </View>
 
       <View style={styles.cardActionRow}>
-        <Pressable style={styles.cardActionButton} onPress={() => openPartSearch(part, category, 'google')}>
-          <MaterialCommunityIcons name="magnify" size={17} color={colors.orange} />
-          <AppText style={styles.cardActionText}>Search</AppText>
+        <Pressable style={styles.cardActionButton} onPress={showPricingUnavailable}>
+          <MaterialCommunityIcons name="tag-search-outline" size={17} color={colors.orange} />
+          <AppText style={styles.cardActionText}>Pricing later</AppText>
         </Pressable>
 
         <Pressable style={styles.cardActionButton} onPress={onEdit}>
@@ -339,7 +295,7 @@ function PartFormSheet({
   const [estimatedCost, setEstimatedCost] = useState('');
   const [actualCost, setActualCost] = useState('');
   const [vendor, setVendor] = useState('');
-  const [status, setStatus] = useState<PartStatus>('Need to Order');
+  const [status, setStatus] = useState<PartStatus>('Needed');
   const [system, setSystem] = useState(workAreas[0] || 'General');
   const [description, setDescription] = useState('');
 
@@ -351,7 +307,7 @@ function PartFormSheet({
       setEstimatedCost(part.estimatedCost ? String(part.estimatedCost) : '');
       setActualCost(part.actualCost ? String(part.actualCost) : '');
       setVendor(part.vendor || '');
-      setStatus(part.status === 'On Hand' ? 'Received' : part.status);
+      setStatus(normalizePartStatus(part.status));
       setSystem(part.system || workAreas[0] || 'General');
       setDescription(part.description || part.notes || '');
       return;
@@ -361,7 +317,7 @@ function PartFormSheet({
     setEstimatedCost('');
     setActualCost('');
     setVendor('');
-    setStatus('Need to Order');
+    setStatus('Needed');
     setSystem(workAreas[0] || 'General');
     setDescription('');
   }, [mode, part, visible, workAreas]);
@@ -439,11 +395,8 @@ function PartFormSheet({
             <SelectField
               label="STATUS"
               value={displayStatus(status)}
-              options={['Needed', 'Ordered', 'Received', 'Installed']}
-              onChange={value => {
-                if (value === 'Needed') setStatus('Need to Order');
-                else setStatus(value as PartStatus);
-              }}
+              options={PART_STATUSES}
+              onChange={value => setStatus(normalizePartStatus(value))}
             />
 
             <SelectField
@@ -493,16 +446,20 @@ export function PartsScreen() {
   const visibleParts = parts.filter((part: Part) => filterMatches(part, filter));
 
   const counts = useMemo(() => ({
-    Needed: parts.filter((part: Part) => part.status === 'Need to Order').length,
-    Ordered: parts.filter((part: Part) => part.status === 'Ordered').length,
-    Received: parts.filter((part: Part) => part.status === 'Received' || part.status === 'On Hand').length,
-    Installed: parts.filter((part: Part) => part.status === 'Installed').length,
+    Needed: parts.filter((part: Part) => normalizePartStatus(part.status) === 'Needed').length,
+    Ordered: parts.filter((part: Part) => normalizePartStatus(part.status) === 'Ordered').length,
+    Received: parts.filter((part: Part) => normalizePartStatus(part.status) === 'Received').length,
+    Installed: parts.filter((part: Part) => normalizePartStatus(part.status) === 'Installed').length,
     All: parts.length,
   }), [parts]);
 
   const estimatedTotal = parts.reduce((sum: number, part: Part) => sum + (part.estimatedCost || 0), 0);
   const actualTotal = parts.reduce((sum: number, part: Part) => sum + (part.actualCost || 0), 0);
   const remainingTotal = Math.max(estimatedTotal - actualTotal, 0);
+  const blockerParts = parts.filter((part: Part) => {
+    const status = normalizePartStatus(part.status);
+    return status === 'Needed' || status === 'Ordered';
+  });
 
   const saveNewPart = (data: {
     name: string;
@@ -520,18 +477,9 @@ export function PartsScreen() {
       undefined,
       data.description,
       data.estimatedCost,
-      data.actualCost
+      data.actualCost,
+      data.status
     );
-
-    if (data.status !== 'Need to Order') {
-      const created = useFabricatorStore
-        .getState()
-        .parts.find((part: Part) => part.projectId === store.selectedProjectId && part.name === data.name);
-
-      if (created) {
-        useFabricatorStore.getState().updatePart(created.id, { status: data.status });
-      }
-    }
 
     setAddOpen(false);
   };
@@ -614,10 +562,40 @@ export function PartsScreen() {
               <AppText style={styles.budgetValue}>{money(actualTotal)}</AppText>
             </View>
             <View style={styles.budgetPill}>
-              <Label>REMAINING</Label>
+              <Label>LEFT</Label>
               <AppText style={styles.budgetValue}>{money(remainingTotal)}</AppText>
             </View>
           </View>
+        </Card>
+
+        <Card style={styles.blockerCard}>
+          <View style={styles.blockerHeader}>
+            <View>
+              <Label>BLOCKERS</Label>
+              <AppText style={styles.blockerTitle}>
+                {blockerParts.length ? `${blockerParts.length} parts to chase` : 'No part blockers'}
+              </AppText>
+            </View>
+
+            <Pressable style={styles.blockerFilterButton} onPress={() => setFilter('Needed')}>
+              <AppText style={styles.blockerFilterText}>Needed</AppText>
+            </Pressable>
+          </View>
+
+          {blockerParts.length ? (
+            blockerParts.slice(0, 3).map((part: Part) => (
+              <View key={part.id} style={styles.blockerRow}>
+                <MaterialCommunityIcons name="alert-circle-outline" size={16} color={colors.orange} />
+                <AppText style={styles.blockerText} numberOfLines={1}>
+                  {part.name} · {displayStatus(part.status)} · {part.system || 'General'}
+                </AppText>
+              </View>
+            ))
+          ) : (
+            <AppText style={styles.blockerEmptyText}>
+              Needed and ordered parts will appear here when they can slow the next shop session.
+            </AppText>
+          )}
         </Card>
 
         <Pressable style={styles.addPartCard} onPress={() => setAddOpen(true)}>
@@ -646,7 +624,6 @@ export function PartsScreen() {
             <PartCard
               key={part.id}
               part={part}
-              category={project?.category}
               onEdit={() => setEditingPart(part)}
             />
           ))
@@ -765,6 +742,54 @@ const styles = StyleSheet.create({
     color: colors.white,
     fontWeight: '900',
     marginTop: 4,
+  },
+  blockerCard: {
+    borderColor: 'rgba(217,106,29,0.28)',
+    marginBottom: 12,
+  },
+  blockerHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    marginBottom: 10,
+  },
+  blockerTitle: {
+    color: colors.white,
+    fontSize: 17,
+    fontWeight: '900',
+    marginTop: 4,
+  },
+  blockerFilterButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(217,106,29,0.45)',
+    backgroundColor: colors.orangeSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  blockerFilterText: {
+    color: colors.orange,
+    fontSize: 12,
+    fontWeight: '900',
+  },
+  blockerRow: {
+    minHeight: 34,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: colors.line,
+  },
+  blockerText: {
+    flex: 1,
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  blockerEmptyText: {
+    color: colors.steel,
+    lineHeight: 20,
   },
   addPartCard: {
     borderRadius: radius.lg,

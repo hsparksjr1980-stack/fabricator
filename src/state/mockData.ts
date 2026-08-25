@@ -60,9 +60,9 @@ export const tasks: BuildTask[] = [
 ];
 
 export const parts: Part[] = [
-{ id:'pa1', projectId:'p1', name:'3/4 inch heims', system:'Steering', status:'Need to Order', vendor:'Speedway Motors', createdAt:'2026-05-22T14:15:00.000Z', updatedAt:'2026-05-22T14:15:00.000Z' },
-{ id:'pa2', projectId:'p1', name:'1 inch DOM tube stock', system:'Chassis', status:'On Hand', createdAt:'2026-05-21T08:45:00.000Z', updatedAt:'2026-05-22T08:30:00.000Z' },
-{ id:'pa3', projectId:'p1', name:'Pedal box tabs', system:'Controls', status:'On Hand', createdAt:'2026-05-21T13:20:00.000Z', updatedAt:'2026-05-21T13:20:00.000Z' },
+{ id:'pa1', projectId:'p1', name:'3/4 inch heims', system:'Steering', status:'Needed', vendor:'Speedway Motors', createdAt:'2026-05-22T14:15:00.000Z', updatedAt:'2026-05-22T14:15:00.000Z' },
+{ id:'pa2', projectId:'p1', name:'1 inch DOM tube stock', system:'Chassis', status:'Received', createdAt:'2026-05-21T08:45:00.000Z', updatedAt:'2026-05-22T08:30:00.000Z' },
+{ id:'pa3', projectId:'p1', name:'Pedal box tabs', system:'Controls', status:'Received', createdAt:'2026-05-21T13:20:00.000Z', updatedAt:'2026-05-21T13:20:00.000Z' },
 { id:'pa4', projectId:'p1', name:'Rear axle bearing hangers', system:'Driveline', status:'Installed', createdAt:'2026-05-20T11:00:00.000Z', updatedAt:'2026-05-22T10:45:00.000Z' }
 ];
 

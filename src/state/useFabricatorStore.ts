@@ -14,6 +14,7 @@ import {
   ProjectStatus,
   QuickAction,
   VoiceNote,
+  normalizePartStatus,
 } from '../types/models';
 
 import { appDataStorage } from '../services/storage/appDataStorage';
@@ -66,7 +67,7 @@ type Store = {
   deleteProject: (id: string) => void;
   syncProjectMetrics: (projectId: string) => void;
   logActivity: (input: Omit<BuildActivity, 'id' | 'createdAt'> & { createdAt?: string }) => void;
-  addTask: (title: string, system: string, createPart?: boolean) => void;
+  addTask: (title: string, system: string, createPart?: boolean, priority?: BuildTask['priority']) => void;
   updateTask: (id: string, updates: Partial<BuildTask>) => void;
   deleteTask: (id: string) => void;
   cycleTask: (id: string) => void;
@@ -77,7 +78,8 @@ type Store = {
     partNumber?: string,
     description?: string,
     estimatedCost?: number,
-    actualCost?: number
+    actualCost?: number,
+    status?: Part['status']
   ) => void;
   updatePart: (id: string, updates: Partial<Part>) => void;
   deletePart: (id: string) => void;
@@ -365,7 +367,7 @@ export const useFabricatorStore = create<Store>()((set, get) => ({
       };
     }),
 
-  addTask: (title, system, createPart) =>
+  addTask: (title, system, createPart, priority) =>
     set(state => {
       const timestamp = now();
       const projectId = state.selectedProjectId;
@@ -377,7 +379,7 @@ export const useFabricatorStore = create<Store>()((set, get) => ({
               projectId,
               name: title,
               system,
-              status: 'Need to Order',
+              status: 'Needed',
               createdAt: timestamp,
               updatedAt: timestamp,
             },
@@ -385,7 +387,7 @@ export const useFabricatorStore = create<Store>()((set, get) => ({
         : [];
 
       const tasks: BuildTask[] = [
-        { id: taskId, projectId, title, system, status: 'To Do', createdAt: timestamp, updatedAt: timestamp },
+        { id: taskId, projectId, title, system, priority, status: 'To Do', createdAt: timestamp, updatedAt: timestamp },
         ...state.tasks,
       ];
       const parts = [...newParts, ...state.parts];
@@ -483,7 +485,7 @@ export const useFabricatorStore = create<Store>()((set, get) => ({
       };
     }),
 
-  addPart: (name, system, vendor, partNumber, description, estimatedCost, actualCost) =>
+  addPart: (name, system, vendor, partNumber, description, estimatedCost, actualCost, status = 'Needed') =>
     set(state => {
       const timestamp = now();
       const projectId = state.selectedProjectId;
@@ -494,7 +496,7 @@ export const useFabricatorStore = create<Store>()((set, get) => ({
           projectId,
           name,
           system,
-          status: 'Need to Order',
+          status: normalizePartStatus(status),
           vendor: vendor || undefined,
           partNumber: partNumber || undefined,
           description: description || undefined,
@@ -572,8 +574,13 @@ export const useFabricatorStore = create<Store>()((set, get) => ({
       const timestamp = now();
       const existing = state.parts.find(part => part.id === id);
       const projectId = existing?.projectId || state.selectedProjectId;
-      const nextStatus = (status: Part['status']): Part['status'] =>
-        status === 'Need to Order' ? 'Ordered' : status === 'Ordered' ? 'On Hand' : status === 'On Hand' ? 'Installed' : 'Need to Order';
+      const nextStatus = (status: Part['status']): Part['status'] => {
+        const normalized = normalizePartStatus(status);
+        if (normalized === 'Needed') return 'Ordered';
+        if (normalized === 'Ordered') return 'Received';
+        if (normalized === 'Received') return 'Installed';
+        return 'Needed';
+      };
       const parts = state.parts.map(part =>
         part.id === id ? { ...part, status: nextStatus(part.status), updatedAt: timestamp } : part
       );
@@ -637,7 +644,7 @@ export const useFabricatorStore = create<Store>()((set, get) => ({
           ...state.photos,
         ],
         activities: [
-          { id: nextId('a'), projectId, kind: 'photo', title: `📷 Added photo: ${caption || tag}`, detail: tag, refId: photoId, createdAt: timestamp },
+          { id: nextId('a'), projectId, kind: 'photo', title: `Added photo: ${caption || tag}`, detail: tag, refId: photoId, createdAt: timestamp },
           ...state.activities,
         ].slice(0, 300),
       };
@@ -726,14 +733,19 @@ export const useFabricatorStore = create<Store>()((set, get) => ({
         ...project,
         status: normalizeProjectStatus(project.status),
       }));
+      const savedParts = (saved.parts || []).map((part: Part) => ({
+        ...part,
+        status: normalizePartStatus(part.status),
+      }));
       const selectedProjectExists = savedProjects.some((project: Project) => project.id === saved.selectedProjectId);
       set({
         ...saved,
         activities: saved.activities || [],
         projectFilter: normalizeProjectStatus(saved.projectFilter),
+        parts: savedParts,
         projects: savedProjects.map((project: Project) => ({
           ...project,
-          ...getProjectMetrics(project, saved.tasks || [], saved.parts || []),
+          ...getProjectMetrics(project, saved.tasks || [], savedParts),
         })),
         selectedProjectId: selectedProjectExists
           ? saved.selectedProjectId

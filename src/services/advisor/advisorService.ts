@@ -1,5 +1,5 @@
 import { useFabricatorStore } from '@/state/useFabricatorStore';
-import { BuildActivity, BuildPhoto, BuildTask, Part } from '@/types/models';
+import { BuildActivity, BuildPhoto, BuildTask, Part, normalizePartStatus } from '@/types/models';
 
 import { buildAdvisorPrompt } from './advisorPromptService';
 import { advisorProviders } from './advisorProviders';
@@ -29,10 +29,10 @@ export function buildAdvisorProjectContext(): AdvisorProjectContext {
     phase: project?.phase,
     openTasks: tasks.filter((task: BuildTask) => task.status !== 'Done' && task.status !== 'Completed'),
     completedTasks: tasks.filter((task: BuildTask) => task.status === 'Done' || task.status === 'Completed'),
-    neededParts: parts.filter((part: Part) => part.status === 'Need to Order'),
-    orderedParts: parts.filter((part: Part) => part.status === 'Ordered'),
-    receivedParts: parts.filter((part: Part) => part.status === 'Received' || part.status === 'On Hand'),
-    installedParts: parts.filter((part: Part) => part.status === 'Installed'),
+    neededParts: parts.filter((part: Part) => normalizePartStatus(part.status) === 'Needed'),
+    orderedParts: parts.filter((part: Part) => normalizePartStatus(part.status) === 'Ordered'),
+    receivedParts: parts.filter((part: Part) => normalizePartStatus(part.status) === 'Received'),
+    installedParts: parts.filter((part: Part) => normalizePartStatus(part.status) === 'Installed'),
     recentPhotos: photos.slice(0, 8),
     recentActivity: activities,
   };
@@ -54,7 +54,9 @@ export async function runAdvisorTool({
   customModelName?: string;
 }): Promise<AdvisorStructuredResponse> {
   const context = buildAdvisorProjectContext();
-  const provider = advisorProviders[providerKey] || advisorProviders.geminiFlash;
+  const provider = advisorProviders[providerKey]?.enabled
+    ? advisorProviders[providerKey]
+    : advisorProviders.localPreview;
   const prompt = buildAdvisorPrompt(tool, context, missingInformation);
 
   const input: AdvisorRunInput = {
@@ -71,5 +73,5 @@ export async function runAdvisorTool({
 }
 
 export function getAdvisorProviders() {
-  return Object.values(advisorProviders);
+  return Object.values(advisorProviders).filter(provider => provider.enabled);
 }

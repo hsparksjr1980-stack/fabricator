@@ -140,6 +140,13 @@ async function callCustomEndpoint(input: AdvisorRunInput, prompt: string): Promi
 }
 
 export const advisorProviders: Record<string, AdvisorProviderAdapter> = {
+  localPreview: {
+    key: 'localPreview',
+    label: 'Local Preview',
+    description: 'No external AI call. Uses project data on this device to preview Shop Help structure.',
+    enabled: true,
+    run: async (input, _prompt) => localStructuredResponse(input, 'Local preview'),
+  },
   geminiFlash: {
     key: 'geminiFlash',
     label: 'Gemini Flash',
@@ -178,8 +185,8 @@ export const advisorProviders: Record<string, AdvisorProviderAdapter> = {
   customEndpoint: {
     key: 'customEndpoint',
     label: 'Use My Own AI',
-    description: 'Allows a user-managed advisor endpoint. Fabricator still owns context, prompt, and formatting.',
-    enabled: true,
+    description: 'Future user-managed advisor endpoint. Disabled until external AI use is approved.',
+    enabled: false,
     supportsCustomEndpoint: true,
     run: callCustomEndpoint,
   },

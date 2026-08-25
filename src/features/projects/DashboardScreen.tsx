@@ -1,7 +1,7 @@
-import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
@@ -10,10 +10,12 @@ import { useFabricatorStore } from '@/state/useFabricatorStore';
 import { BuildPhoto, BuildTask, Part, ProjectStatus } from '@/types/models';
 import { colors, radius, spacing } from '@/theme/theme';
 import { RecentActivityWidget } from '@/components/dashboard/widgets/RecentActivityWidget';
+import { exportProjectRecord } from '@/services/export/projectExportService';
 
 function formatCurrency(value?: number) {
   const safeValue = Number(value || 0);
-  return `$${safeValue.toLocaleString()}`;
+  const prefix = safeValue < 0 ? '-$' : '$';
+  return `${prefix}${Math.abs(safeValue).toLocaleString()}`;
 }
 
 function statusLabel(status: ProjectStatus) {
@@ -68,6 +70,7 @@ export function DashboardScreen() {
   const navigation = useNavigation<any>();
   const store = useFabricatorStore();
   const project = store.activeProject();
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (!project) {
@@ -88,6 +91,35 @@ export function DashboardScreen() {
   const expectedBudget = project.expectedBudget ?? project.budgetTarget ?? 0;
   const actualSpend = projectParts.reduce((sum, part) => sum + (part.actualCost || 0), 0);
   const remainingBudget = expectedBudget - actualSpend;
+  const projectActivities = store.activities.filter(activity => activity.projectId === project.id);
+  const projectVoiceNotes = store.voiceNotes.filter(note => note.projectId === project.id);
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+
+      const result = await exportProjectRecord({
+        project,
+        tasks: projectTasks,
+        parts: projectParts,
+        photos: projectPhotos,
+        activities: projectActivities,
+        voiceNotes: projectVoiceNotes,
+      });
+
+      Alert.alert(
+        'Project export saved',
+        `${result.fileName} was saved to Fabricator local document storage.\n\n${result.uri}`
+      );
+    } catch {
+      Alert.alert(
+        'Export did not finish',
+        'Fabricator could not create the project export from local data. Try again after reopening the app.'
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <Screen>
@@ -147,7 +179,7 @@ export function DashboardScreen() {
             <View style={styles.budgetRow}>
               <BudgetChip label="Expected" value={formatCurrency(expectedBudget)} />
               <BudgetChip label="Actual" value={formatCurrency(actualSpend)} />
-              <BudgetChip label="Remaining" value={formatCurrency(Math.abs(remainingBudget))} tone={remainingBudget >= 0 ? 'good' : 'warning'} />
+              <BudgetChip label="Left" value={formatCurrency(remainingBudget)} tone={remainingBudget >= 0 ? 'good' : 'warning'} />
             </View>
           </View>
         </Card>
@@ -172,6 +204,36 @@ export function DashboardScreen() {
             onPress={() => navigation.navigate('Photos')}
           />
         </View>
+
+        <Card style={styles.dataTrustCard}>
+          <View style={styles.dataTrustTop}>
+            <View style={styles.dataTrustIcon}>
+              <MaterialCommunityIcons name="shield-check-outline" size={21} color={colors.orange} />
+            </View>
+
+            <View style={{ flex: 1 }}>
+              <AppText style={styles.dataTrustTitle}>Local build record</AppText>
+              <AppText style={styles.dataTrustCopy}>
+                Your project data is saved on this device. Export creates a readable Markdown record from the data available locally.
+              </AppText>
+            </View>
+          </View>
+
+          <Pressable
+            disabled={isExporting}
+            onPress={handleExport}
+            style={({ pressed }) => [
+              styles.exportButton,
+              pressed && styles.pressed,
+              isExporting && styles.disabledButton,
+            ]}
+          >
+            <MaterialCommunityIcons name="file-export-outline" size={18} color={colors.black} />
+            <AppText style={styles.exportButtonText}>
+              {isExporting ? 'Exporting...' : 'Export Project'}
+            </AppText>
+          </Pressable>
+        </Card>
 
         <RecentActivityWidget />
       </ScrollView>
@@ -322,11 +384,14 @@ const styles = StyleSheet.create({
   },
   budgetRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     gap: 8,
     marginTop: 12,
   },
   budgetChip: {
-    flex: 1,
+    flexGrow: 1,
+    flexBasis: '31%',
+    minWidth: 92,
     backgroundColor: colors.charcoal,
     borderWidth: 1,
     borderColor: colors.line,
@@ -338,7 +403,7 @@ const styles = StyleSheet.create({
     color: colors.steel,
     fontSize: 10,
     fontWeight: '900',
-    letterSpacing: 1.1,
+    letterSpacing: 0,
     textTransform: 'uppercase',
   },
   budgetValue: {
@@ -356,6 +421,51 @@ const styles = StyleSheet.create({
   navGrid: {
     gap: 10,
     marginBottom: 14,
+  },
+  dataTrustCard: {
+    borderColor: 'rgba(96,165,250,0.32)',
+    marginBottom: 14,
+  },
+  dataTrustTop: {
+    flexDirection: 'row',
+    gap: 12,
+    alignItems: 'flex-start',
+    marginBottom: 14,
+  },
+  dataTrustIcon: {
+    width: 38,
+    height: 38,
+    borderRadius: 13,
+    backgroundColor: colors.orangeSoft,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  dataTrustTitle: {
+    color: colors.white,
+    fontSize: 16,
+    fontWeight: '900',
+  },
+  dataTrustCopy: {
+    color: colors.steel,
+    fontSize: 12,
+    lineHeight: 18,
+    marginTop: 4,
+  },
+  exportButton: {
+    minHeight: 46,
+    borderRadius: radius.md,
+    backgroundColor: colors.orange,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  exportButtonText: {
+    color: colors.black,
+    fontWeight: '900',
+  },
+  disabledButton: {
+    opacity: 0.62,
   },
   navTile: {
     flexDirection: 'row',

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Audio } from 'expo-av';
-import { ImageBackground, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, ImageBackground, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Button } from '@/components/Button';
@@ -48,6 +48,7 @@ return ()=>clearInterval(interval)
 },[recording]);
 
 const toggleRecording=async()=>{
+try{
 if(recording){
 setPipeline('processing');
 const active=recordingRef.current;
@@ -55,6 +56,9 @@ if(active){
 await active.stopAndUnloadAsync();
 const result=await mockVoiceTranscriptionService.transcribe(active.getURI()||undefined,duration*1000);
 store.addVoiceNote(result.transcript);
+if(result.source==='supabase-error'){
+Alert.alert('Transcription unavailable','The recording stopped, but Fabricator could not create a transcript from the remote service. The note was saved with a recovery message.');
+}
 }
 recordingRef.current=null;
 setRecording(false);
@@ -64,7 +68,10 @@ return;
 }
 
 const permission=await Audio.requestPermissionsAsync();
-if(!permission.granted)return;
+if(!permission.granted){
+Alert.alert('Microphone access needed','Allow microphone access for Fabricator in device settings, then try recording again.');
+return;
+}
 await Audio.setAudioModeAsync({allowsRecordingIOS:true,playsInSilentModeIOS:true});
 const rec=new Audio.Recording();
 await rec.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
@@ -73,6 +80,12 @@ recordingRef.current=rec;
 setPromoted(false);
 setRecording(true);
 setPipeline('capturing');
+}catch{
+recordingRef.current=null;
+setRecording(false);
+setPipeline('idle');
+Alert.alert('Recording unavailable','Fabricator could not start or stop the recording. Try again after checking microphone access.');
+}
 }
 
 const promoteItems=()=>{
@@ -86,9 +99,9 @@ return <Screen>
 <ImageBackground source={{uri:hero}} style={styles.hero} imageStyle={styles.heroImage}>
 <LinearGradient colors={['rgba(9,10,11,0.05)','rgba(9,10,11,0.72)','rgba(9,10,11,0.98)']} style={styles.heroShade}/>
 <View style={styles.heroContent}>
-<Label>VOICE OPERATIONS</Label>
+<Label>VOICE NOTES</Label>
 <Title style={styles.heroTitle}>Workshop Memory</Title>
-<AppText style={styles.heroCopy}>Capture fabrication thinking in real time. Fabricator now includes a real local recording pipeline foundation.</AppText>
+<AppText style={styles.heroCopy}>Capture shop thoughts quickly. Transcription may be unavailable; local extraction is a preview.</AppText>
 </View>
 </ImageBackground>
 
@@ -96,12 +109,12 @@ return <Screen>
 <View style={styles.captureHeader}><View><Label>LIVE SESSION</Label><Title style={styles.captureTitle}>{recording?'Recording in shop':'Ready for hands-free capture'}</Title></View><View style={[styles.statusOrb,recording&&styles.statusOrbActive]} /></View>
 <Pressable onPress={toggleRecording} style={({pressed})=>[styles.recordButton,pressed&&styles.recordPressed]}><View style={styles.innerRecord}><MaterialCommunityIcons name={recording?'stop':'microphone'} size={52} color={colors.white}/></View></Pressable>
 <Title style={styles.timer}>{String(Math.floor(duration/60)).padStart(2,'0')}:{String(duration%60).padStart(2,'0')}</Title>
-<AppText style={styles.pipeline}>{pipeline==='capturing'?'Capturing workshop audio':pipeline==='processing'?'Processing build intelligence':'Voice pipeline standing by'}</AppText>
-<AppText style={styles.captureText}>Next phase connects real speech-to-text AI transcription and cloud extraction.</AppText>
+<AppText style={styles.pipeline}>{pipeline==='capturing'?'Capturing workshop audio':pipeline==='processing'?'Checking transcription availability':'Voice capture standing by'}</AppText>
+<AppText style={styles.captureText}>Generated items are local pattern matches. Review them before adding anything to the build.</AppText>
 <Button title={recording?'Stop Recording':'Start Workshop Capture'} onPress={toggleRecording} />
 </Card>
 
-{latest?<><View style={styles.sectionHeader}><Label>AI EXTRACTION</Label><AppText>Operational build intelligence</AppText></View>
+{latest?<><View style={styles.sectionHeader}><Label>LOCAL EXTRACTION</Label><AppText>Editable build suggestions</AppText></View>
 <View style={styles.grid}><Card style={styles.gridCard}><View style={styles.iconRow}><MaterialCommunityIcons name="package-variant-closed" size={22} color={colors.orange}/><Label>Parts To Order</Label></View>{extracted.parts.length?extracted.parts.map(item=><AppText key={item} style={styles.listItem}>• {item}</AppText>):<AppText>No parts detected yet.</AppText>}</Card><Card style={styles.gridCard}><View style={styles.iconRow}><MaterialCommunityIcons name="hammer-wrench" size={22} color={colors.orange}/><Label>Next Session</Label></View>{extracted.next.length?extracted.next.map(item=><AppText key={item} style={styles.listItem}>• {item}</AppText>):<AppText>No next-session actions extracted.</AppText>}</Card></View>
 <Card><View style={styles.iconRow}><MaterialCommunityIcons name="alert-outline" size={22} color={colors.orange}/><Label>Blockers + Risks</Label></View>{extracted.blockers.length?extracted.blockers.map(item=><AppText key={item} style={styles.listItem}>• {item}</AppText>):<AppText>No major blockers detected.</AppText>}<View style={{height:12}} /><Button title={promoted?'Added to build system':'Add Extracted Items to Build'} onPress={promoteItems} /></Card>
 <Card style={styles.transcriptCard}><View style={styles.iconRow}><MaterialCommunityIcons name="waveform" size={22} color={colors.orange}/><Label>Latest Transcript</Label></View><AppText style={styles.transcript}>{latest.transcript}</AppText></Card>

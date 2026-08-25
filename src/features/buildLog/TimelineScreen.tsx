@@ -6,7 +6,7 @@ import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { AppText, Label, Title } from '@/components/Text';
 import { useFabricatorStore } from '@/state/useFabricatorStore';
-import { BuildActivity, BuildPhoto, BuildTask, Part } from '@/types/models';
+import { BuildActivity, BuildPhoto, BuildTask, Part, normalizePartStatus } from '@/types/models';
 import { colors, radius, spacing } from '@/theme/theme';
 
 type TimelineItem = {
@@ -16,6 +16,12 @@ type TimelineItem = {
   detail?: string;
   date: string;
   icon: keyof typeof MaterialCommunityIcons.glyphMap;
+};
+
+type TimelineGroup = {
+  key: string;
+  label: string;
+  items: TimelineItem[];
 };
 
 function formatTimelineDate(value: string) {
@@ -28,6 +34,42 @@ function formatTimelineDate(value: string) {
     hour: 'numeric',
     minute: '2-digit',
   });
+}
+
+function formatTimelineDay(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) return 'Today';
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+
+  return date.toLocaleDateString(undefined, {
+    weekday: 'short',
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function groupKey(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toISOString().slice(0, 10);
+}
+
+function displayKind(kind: string) {
+  const normalized = kind.toLowerCase();
+  if (normalized.includes('photo')) return 'Photo';
+  if (normalized.includes('milestone')) return 'Milestone';
+  if (normalized.includes('part')) return 'Part';
+  if (normalized.includes('task')) return 'Task';
+  if (normalized.includes('budget')) return 'Budget';
+  if (normalized.includes('voice')) return 'Voice Note';
+  if (normalized.includes('project')) return 'Project';
+  return 'Activity';
 }
 
 function iconForKind(kind: string): keyof typeof MaterialCommunityIcons.glyphMap {
@@ -45,7 +87,29 @@ function iconForKind(kind: string): keyof typeof MaterialCommunityIcons.glyphMap
 }
 
 function normalizePhotoTitle(photo: BuildPhoto) {
-  return `📷 Added photo: ${photo.caption || 'Build photo'}`;
+  return `Added photo: ${photo.caption || 'Build photo'}`;
+}
+
+function buildTimelineGroups(items: TimelineItem[]): TimelineGroup[] {
+  const groups = new Map<string, TimelineGroup>();
+
+  items.forEach(item => {
+    const key = groupKey(item.date);
+    const existing = groups.get(key);
+
+    if (existing) {
+      existing.items.push(item);
+      return;
+    }
+
+    groups.set(key, {
+      key,
+      label: formatTimelineDay(item.date),
+      items: [item],
+    });
+  });
+
+  return Array.from(groups.values());
 }
 
 function TimelineRow({
@@ -78,11 +142,8 @@ function TimelineRow({
       >
         <View style={styles.cardTop}>
           <View style={{ flex: 1 }}>
-            <Label>{item.kind}</Label>
-            <AppText
-              numberOfLines={2}
-              style={styles.activityTitle}
-            >
+            <Label>{displayKind(item.kind)}</Label>
+            <AppText style={styles.activityTitle}>
               {item.title}
             </AppText>
           </View>
@@ -93,10 +154,7 @@ function TimelineRow({
         </View>
 
         {item.detail ? (
-          <AppText
-            numberOfLines={2}
-            style={styles.detailText}
-          >
+          <AppText style={styles.detailText}>
             {item.detail}
           </AppText>
         ) : null}
@@ -117,7 +175,7 @@ export function TimelineScreen() {
         )
         .map((activity: BuildActivity) => ({
           id: activity.id,
-          kind: String(activity.kind),
+          kind: displayKind(String(activity.kind)),
           title: activity.title,
           detail: activity.detail,
           date: activity.createdAt,
@@ -133,7 +191,7 @@ export function TimelineScreen() {
         id: `task-${task.id}`,
         kind: 'Task',
         title: task.title,
-        detail: `${task.system} • ${task.status}`,
+        detail: `${task.system || 'General'} | ${task.status}`,
         date: task.updatedAt || task.createdAt,
         icon: 'clipboard-check-outline',
       }));
@@ -147,7 +205,7 @@ export function TimelineScreen() {
         id: `part-${part.id}`,
         kind: 'Part',
         title: part.name,
-        detail: `${part.system} • ${part.status}`,
+        detail: `${part.system || 'General'} | ${normalizePartStatus(part.status)}`,
         date: part.updatedAt || part.createdAt,
         icon: 'package-variant',
       }));
@@ -196,6 +254,8 @@ export function TimelineScreen() {
     store.tasks,
   ]);
 
+  const groups = useMemo(() => buildTimelineGroups(items), [items]);
+
   return (
     <Screen>
       <View style={styles.compactHero}>
@@ -205,7 +265,7 @@ export function TimelineScreen() {
             Build Timeline
           </Title>
           <AppText style={styles.heroCopy}>
-            Compact activity from tasks, parts, photos, milestones, and project changes.
+            Project memory from tasks, parts, photos, milestones, notes, costs, and project changes.
           </AppText>
         </View>
 
@@ -217,17 +277,28 @@ export function TimelineScreen() {
       </View>
 
       {items.length ? (
-        items.map((item: TimelineItem, index: number) => (
-          <TimelineRow
-            key={item.id}
-            item={item}
-            featured={index === 0}
-          />
+        groups.map((group: TimelineGroup, groupIndex: number) => (
+          <View key={group.key} style={styles.dayGroup}>
+            <View style={styles.dayHeader}>
+              <AppText style={styles.dayLabel}>{group.label}</AppText>
+              <View style={styles.dayRule} />
+            </View>
+
+            {group.items.map((item: TimelineItem, itemIndex: number) => (
+              <TimelineRow
+                key={item.id}
+                item={item}
+                featured={groupIndex === 0 && itemIndex === 0}
+              />
+            ))}
+          </View>
         ))
       ) : (
         <Card style={styles.emptyCard}>
-          <AppText>
-            No activity yet. Add a task, part, or photo to start the timeline.
+          <MaterialCommunityIcons name="timeline-plus-outline" size={34} color={colors.orange} />
+          <Title style={styles.emptyTitle}>No build history yet</Title>
+          <AppText style={styles.emptyCopy}>
+            Add a task, part, photo, note, or project update and Fabricator will start building the record here.
           </AppText>
         </Card>
       )}
@@ -273,6 +344,27 @@ const styles = StyleSheet.create({
     color: colors.orange,
     fontWeight: '900',
     fontSize: 12,
+  },
+  dayGroup: {
+    marginBottom: 8,
+  },
+  dayHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginBottom: 8,
+    marginTop: 2,
+  },
+  dayLabel: {
+    color: colors.orange,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase',
+  },
+  dayRule: {
+    flex: 1,
+    height: 1,
+    backgroundColor: colors.line,
   },
   timelineRow: {
     flexDirection: 'row',
@@ -320,6 +412,7 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     fontSize: 10,
     textAlign: 'right',
+    maxWidth: 82,
   },
   detailText: {
     color: colors.steel,
@@ -329,5 +422,17 @@ const styles = StyleSheet.create({
   },
   emptyCard: {
     padding: spacing.md,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 22,
+    lineHeight: 27,
+    marginTop: 12,
+  },
+  emptyCopy: {
+    color: colors.steel,
+    lineHeight: 20,
+    marginTop: 8,
+    textAlign: 'center',
   },
 });

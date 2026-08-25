@@ -6,6 +6,7 @@ type AuthContextValue = {
   session: Session | null;
   user: User | null;
   isLoading: boolean;
+  authError: string | null;
   signUp: (email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -21,20 +22,26 @@ export function AuthProvider({
 }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
 
   useEffect(() => {
     supabase.auth
       .getSession()
       .then(({ data, error }) => {
-        console.log('getSession result', {
-          hasSession: !!data?.session,
-          error,
-        });
+        if (error) {
+          setAuthError(
+            'Fabricator could not reach account services. You can retry sign-in when the backend is available.'
+          );
+        } else {
+          setAuthError(null);
+        }
 
         setSession(data?.session ?? null);
       })
-      .catch((err) => {
-        console.error('getSession crash', err);
+      .catch(() => {
+        setAuthError(
+          'Fabricator could not reach account services. You can retry sign-in when the backend is available.'
+        );
       })
       .finally(() => {
         setIsLoading(false);
@@ -56,6 +63,7 @@ export function AuthProvider({
       session,
       user: session?.user ?? null,
       isLoading,
+      authError,
 
       async signUp(email, password) {
         const { error } = await supabase.auth.signUp({
@@ -95,7 +103,7 @@ export function AuthProvider({
         }
       },
     }),
-    [session, isLoading]
+    [session, isLoading, authError]
   );
 
   return (
