@@ -20,7 +20,6 @@ import { colors, radius, spacing } from '@/theme/theme';
 
 const quickSystems = [
   'Today',
-  'Next Session',
   'Fabrication',
   'Chassis',
   'Suspension',
@@ -52,6 +51,10 @@ function isTaskDone(status: TaskStatus) {
 
 function statusLabel(status: TaskStatus) {
   return status === 'Completed' ? 'Done' : status;
+}
+
+function isNextSessionTask(task: BuildTask) {
+  return task.priority === 'High' || task.system === 'Next Session';
 }
 
 function nextTaskStatus(status: TaskStatus): TaskStatus {
@@ -152,6 +155,12 @@ function TaskRow({
           <AppText style={styles.rowStatusText}>
             {statusLabel(task.status)}
           </AppText>
+
+          {isNextSessionTask(task) && !done ? (
+            <View style={styles.nextPill}>
+              <AppText style={styles.nextPillText}>Next session</AppText>
+            </View>
+          ) : null}
         </View>
       </View>
 
@@ -186,6 +195,7 @@ function TaskEditModal({
   const [title, setTitle] = useState('');
   const [system, setSystem] = useState('Today');
   const [status, setStatus] = useState<TaskStatus>('To Do');
+  const [priority, setPriority] = useState<BuildTask['priority']>();
   const [notes, setNotes] = useState('');
 
   useMemo(() => {
@@ -193,6 +203,7 @@ function TaskEditModal({
     setTitle(task.title);
     setSystem(task.system || 'General');
     setStatus(task.status === 'Completed' ? 'Done' : task.status);
+    setPriority(task.priority);
     setNotes(task.notes || '');
   }, [task]);
 
@@ -203,6 +214,7 @@ function TaskEditModal({
       title: title.trim(),
       system: system.trim() || 'General',
       status,
+      priority,
       notes: notes.trim() || undefined,
     });
   };
@@ -275,6 +287,23 @@ function TaskEditModal({
               ))}
             </View>
 
+            <View style={styles.priorityPanel}>
+              <View style={{ flex: 1 }}>
+                <AppText style={styles.priorityTitle}>Next session priority</AppText>
+                <AppText style={styles.priorityCopy}>Pins this task into the next shop session.</AppText>
+              </View>
+
+              <Switch
+                value={priority === 'High'}
+                onValueChange={value => setPriority(value ? 'High' : undefined)}
+                trackColor={{
+                  false: colors.graphite,
+                  true: colors.orange,
+                }}
+                thumbColor={colors.white}
+              />
+            </View>
+
             <TextInput
               value={notes}
               onChangeText={setNotes}
@@ -320,6 +349,7 @@ export function TasksScreen() {
   const [title, setTitle] = useState('');
   const [system, setSystem] = useState('Today');
   const [addToBuyList, setAddToBuyList] = useState(false);
+  const [nextSession, setNextSession] = useState(true);
   const [editingTask, setEditingTask] = useState<BuildTask | null>(null);
 
   const tasks = store.tasks.filter(
@@ -332,8 +362,8 @@ export function TasksScreen() {
       Today: tasks.filter(
         (task: BuildTask) =>
           !isTaskDone(task.status) &&
-          (task.system === 'Today' ||
-            task.system === 'Next Session' ||
+          (isNextSessionTask(task) ||
+            task.system === 'Today' ||
             task.status === 'In Progress')
       ),
       Open: tasks.filter(
@@ -341,7 +371,7 @@ export function TasksScreen() {
           !isTaskDone(task.status) &&
           task.status !== 'In Progress' &&
           task.system !== 'Today' &&
-          task.system !== 'Next Session'
+          !isNextSessionTask(task)
       ),
       Done: tasks.filter(
         (task: BuildTask) => isTaskDone(task.status)
@@ -356,16 +386,18 @@ export function TasksScreen() {
     store.addTask(
       title.trim(),
       system.trim() || 'General',
-      addToBuyList
+      addToBuyList,
+      nextSession ? 'High' : undefined
     );
 
     setTitle('');
     setSystem('Today');
     setAddToBuyList(false);
+    setNextSession(true);
   };
 
   const fastAdd = (text: string) => {
-    store.addTask(text, system.trim() || 'Today', false);
+    store.addTask(text, system.trim() || 'Today', false, nextSession ? 'High' : undefined);
   };
 
   const saveEdit = (updates: Partial<BuildTask>) => {
@@ -387,7 +419,7 @@ export function TasksScreen() {
           <Label>TASKS</Label>
           <Title style={styles.heroTitle}>Shop List</Title>
           <AppText style={styles.heroCopy}>
-            Compact capture, status tracking, and quick edits.
+            Capture work quickly and keep next-session tasks in front.
           </AppText>
         </View>
 
@@ -420,6 +452,27 @@ export function TasksScreen() {
               color={colors.white}
             />
           </Pressable>
+        </View>
+
+        <View style={styles.buyRow}>
+          <View style={{ flex: 1 }}>
+            <AppText style={styles.buyTitle}>
+              Next session priority
+            </AppText>
+            <AppText style={styles.buyCopy}>
+              Pins new tasks into the shop-session list.
+            </AppText>
+          </View>
+
+          <Switch
+            value={nextSession}
+            onValueChange={setNextSession}
+            trackColor={{
+              false: colors.graphite,
+              true: colors.orange,
+            }}
+            thumbColor={colors.white}
+          />
         </View>
 
         <View style={styles.buyRow}>
@@ -757,6 +810,19 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
   },
+  nextPill: {
+    backgroundColor: colors.orangeSoft,
+    borderColor: 'rgba(217,106,29,0.42)',
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  nextPillText: {
+    color: colors.orange,
+    fontSize: 10,
+    fontWeight: '900',
+  },
   iconButton: {
     width: 32,
     height: 32,
@@ -825,6 +891,26 @@ const styles = StyleSheet.create({
   notesInput: {
     minHeight: 90,
     textAlignVertical: 'top',
+  },
+  priorityPanel: {
+    marginBottom: 11,
+    padding: 10,
+    borderRadius: radius.md,
+    backgroundColor: colors.charcoal,
+    borderColor: colors.line,
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  priorityTitle: {
+    color: colors.white,
+    fontWeight: '800',
+    fontSize: 13,
+  },
+  priorityCopy: {
+    color: colors.steel,
+    fontSize: 11,
+    marginTop: 2,
   },
   sheetActions: {
     gap: 10,

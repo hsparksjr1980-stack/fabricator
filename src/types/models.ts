@@ -44,9 +44,16 @@ export type TaskStatus =
   | 'Done';
 
 export type PartStatus =
+  | 'Needed'
   | 'Need to Order'
   | 'Ordered'
   | 'On Hand'
+  | 'Received'
+  | 'Installed';
+
+export type CanonicalPartStatus =
+  | 'Needed'
+  | 'Ordered'
   | 'Received'
   | 'Installed';
 
@@ -274,6 +281,13 @@ export function normalizeProjectCategory(
   }
 
   return DEFAULT_PROJECT_CATEGORY;
+}
+
+export function normalizePartStatus(status: unknown): CanonicalPartStatus {
+  if (status === 'Ordered') return 'Ordered';
+  if (status === 'Received' || status === 'On Hand') return 'Received';
+  if (status === 'Installed') return 'Installed';
+  return 'Needed';
 }
 
 export function normalizeProjectPhase(

@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import {
+  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -212,7 +213,10 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
   }, [projectFilter, projects, search]);
 
   const createProject = () => {
-    if (!projectName.trim()) return;
+    if (!projectName.trim()) {
+      Alert.alert('Project name required', 'Give this build a name before saving.');
+      return;
+    }
 
     const numericExpectedBudget = expectedBudget ? Number(expectedBudget) : 0;
 
@@ -239,6 +243,7 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
   };
 
   const titleForFilter = statusLabels[projectFilter];
+  const hasActiveProject = projectCounts.active > 0;
 
   return (
     <Screen>
@@ -252,7 +257,7 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
             <Title style={styles.heroTitle}>Build Library</Title>
 
             <AppText style={styles.heroCopy}>
-              Project status is now driven from the dashboard summary cards. This screen shows the selected project set.
+              Create, reopen, archive, or review every build record from one place.
             </AppText>
           </View>
 
@@ -313,6 +318,15 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
               onChangeText={setProjectName}
               style={styles.input}
             />
+
+            {hasActiveProject ? (
+              <View style={styles.planNotice}>
+                <MaterialCommunityIcons name="lock-open-variant-outline" size={18} color={colors.orange} />
+                <AppText style={styles.planNoticeText}>
+                  Free-plan limit is preview-only in this build. Paid multi-project access will be enforced after monetization approval.
+                </AppText>
+              </View>
+            ) : null}
 
             <Label>CATEGORY</Label>
             <SelectorChips
@@ -390,6 +404,23 @@ export function WelcomeScreen({ navigation }: NativeStackScreenProps<any>) {
           <Card style={styles.emptyCard}>
             <MaterialCommunityIcons name="folder-search-outline" size={26} color={colors.orange} />
             <AppText style={styles.emptyText}>No {titleForFilter.toLowerCase()} projects found.</AppText>
+            <View style={styles.emptyActions}>
+              {projectFilter !== 'active' ? (
+                <Pressable style={styles.emptyActionButton} onPress={() => setProjectFilter('active')}>
+                  <AppText style={styles.emptyActionText}>Show Active</AppText>
+                </Pressable>
+              ) : null}
+
+              {search ? (
+                <Pressable style={styles.emptyActionButton} onPress={() => setSearch('')}>
+                  <AppText style={styles.emptyActionText}>Clear Search</AppText>
+                </Pressable>
+              ) : null}
+
+              <Pressable style={styles.emptyActionButton} onPress={() => setShowCreate(true)}>
+                <AppText style={styles.emptyActionText}>New Project</AppText>
+              </Pressable>
+            </View>
           </Card>
         )}
       </ScrollView>
@@ -493,6 +524,24 @@ const styles = StyleSheet.create({
     borderRadius: radius.md,
     marginTop: 9,
     marginBottom: 12,
+  },
+  planNotice: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: colors.orangeSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(217,106,29,0.35)',
+    borderRadius: radius.md,
+    padding: 10,
+    marginBottom: 12,
+  },
+  planNoticeText: {
+    flex: 1,
+    color: colors.white,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
   },
   chipWrap: {
     flexDirection: 'row',
@@ -684,6 +733,25 @@ const styles = StyleSheet.create({
   emptyText: {
     color: colors.steel,
     fontWeight: '800',
+  },
+  emptyActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 8,
+  },
+  emptyActionButton: {
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(217,106,29,0.35)',
+    backgroundColor: colors.orangeSoft,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  emptyActionText: {
+    color: colors.orange,
+    fontSize: 12,
+    fontWeight: '900',
   },
   pressed: {
     opacity: 0.78,

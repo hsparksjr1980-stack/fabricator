@@ -2,7 +2,7 @@ import { BuildActivity, BuildPhoto, BuildTask, Part, Project } from '@/types/mod
 
 export type AdvisorToolKey = 'priority' | 'troubleshooting' | 'photoReview';
 
-export type AdvisorProviderKey = 'geminiFlash' | 'openAI' | 'claude' | 'ollama' | 'localModel' | 'customEndpoint';
+export type AdvisorProviderKey = 'localPreview' | 'geminiFlash' | 'openAI' | 'claude' | 'ollama' | 'localModel' | 'customEndpoint';
 
 export type AdvisorResponseSection = {
   title: string;

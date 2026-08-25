@@ -6,6 +6,8 @@ type AuthContextValue = {
   session: Session | null;
   user: User | null;
   isLoading: boolean;
+  authError: string | null;
+  retrySession: () => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
@@ -21,24 +23,36 @@ export function AuthProvider({
 }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [authError, setAuthError] = useState<string | null>(null);
+
+  const loadSession = async () => {
+    try {
+      setIsLoading(true);
+
+      const { data, error } = await supabase.auth
+      .getSession()
+      ;
+
+      if (error) {
+        setAuthError(
+          'Fabricator could not reach account services. You can retry sign-in when the backend is available.'
+        );
+      } else {
+        setAuthError(null);
+      }
+
+      setSession(data?.session ?? null);
+    } catch {
+      setAuthError(
+        'Fabricator could not reach account services. You can retry sign-in when the backend is available.'
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   useEffect(() => {
-    supabase.auth
-      .getSession()
-      .then(({ data, error }) => {
-        console.log('getSession result', {
-          hasSession: !!data?.session,
-          error,
-        });
-
-        setSession(data?.session ?? null);
-      })
-      .catch((err) => {
-        console.error('getSession crash', err);
-      })
-      .finally(() => {
-        setIsLoading(false);
-      });
+    loadSession();
 
     const {
       data: { subscription },
@@ -56,6 +70,8 @@ export function AuthProvider({
       session,
       user: session?.user ?? null,
       isLoading,
+      authError,
+      retrySession: loadSession,
 
       async signUp(email, password) {
         const { error } = await supabase.auth.signUp({
@@ -66,6 +82,8 @@ export function AuthProvider({
         if (error) {
           throw error;
         }
+
+        setAuthError(null);
       },
 
       async signIn(email, password) {
@@ -77,6 +95,8 @@ export function AuthProvider({
         if (error) {
           throw error;
         }
+
+        setAuthError(null);
       },
 
       async signOut() {
@@ -85,6 +105,8 @@ export function AuthProvider({
         if (error) {
           throw error;
         }
+
+        setAuthError(null);
       },
 
       async resetPassword(email) {
@@ -93,9 +115,11 @@ export function AuthProvider({
         if (error) {
           throw error;
         }
+
+        setAuthError(null);
       },
     }),
-    [session, isLoading]
+    [session, isLoading, authError]
   );
 
   return (

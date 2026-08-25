@@ -1,24 +1,110 @@
-import { View, StyleSheet } from 'react-native';
+import { useMemo } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 import { Card } from '@/components/Card';
 import { AppText, Label, Title } from '@/components/Text';
 import { useFabricatorStore } from '@/state/useFabricatorStore';
+import { BuildActivity, BuildPhoto, BuildTask, Part, normalizePartStatus } from '@/types/models';
 import { colors } from '@/theme/theme';
+
+type RecentActivityItem = {
+  id: string;
+  title: string;
+  detail: string;
+  date: string;
+  icon: keyof typeof MaterialCommunityIcons.glyphMap;
+};
+
+function formatDate(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+
+  return date.toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+  });
+}
+
+function iconForKind(kind: string): keyof typeof MaterialCommunityIcons.glyphMap {
+  const normalized = kind.toLowerCase();
+  if (normalized.includes('photo')) return 'camera';
+  if (normalized.includes('part')) return 'package-variant';
+  if (normalized.includes('task')) return 'clipboard-check-outline';
+  if (normalized.includes('voice')) return 'microphone-outline';
+  if (normalized.includes('budget')) return 'cash';
+  if (normalized.includes('milestone')) return 'flag-checkered';
+  return 'history';
+}
 
 export function RecentActivityWidget() {
   const store = useFabricatorStore();
-
   const projectId = store.selectedProjectId;
 
-  const recentPhotos = store.photos
-    .filter(photo => photo.projectId === projectId)
-    .sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() -
-        new Date(a.createdAt).getTime()
-    )
-    .slice(0, 5);
+  const recentItems = useMemo(() => {
+    const activityItems: RecentActivityItem[] = store.activities
+      .filter((activity: BuildActivity) => activity.projectId === projectId)
+      .map((activity: BuildActivity) => ({
+        id: activity.id,
+        title: activity.title,
+        detail: activity.detail || String(activity.kind),
+        date: activity.createdAt,
+        icon: iconForKind(String(activity.kind)),
+      }));
+
+    const taskItems: RecentActivityItem[] = store.tasks
+      .filter((task: BuildTask) => task.projectId === projectId)
+      .map((task: BuildTask) => ({
+        id: `task-${task.id}`,
+        title: task.title,
+        detail: `${task.system || 'General'} | ${task.status}`,
+        date: task.updatedAt || task.createdAt,
+        icon: 'clipboard-check-outline',
+      }));
+
+    const partItems: RecentActivityItem[] = store.parts
+      .filter((part: Part) => part.projectId === projectId)
+      .map((part: Part) => ({
+        id: `part-${part.id}`,
+        title: part.name,
+        detail: `${part.system || 'General'} | ${normalizePartStatus(part.status)}`,
+        date: part.updatedAt || part.createdAt,
+        icon: 'package-variant',
+      }));
+
+    const photoItems: RecentActivityItem[] = store.photos
+      .filter((photo: BuildPhoto) => photo.projectId === projectId)
+      .map((photo: BuildPhoto) => ({
+        id: `photo-${photo.id}`,
+        title: photo.isMilestone
+          ? photo.milestoneTitle || 'Milestone photo'
+          : photo.caption || 'Added photo',
+        detail: photo.tag || 'Photo',
+        date: photo.createdAt,
+        icon: photo.isMilestone ? 'flag-checkered' : 'camera',
+      }));
+
+    const unique = new Map<string, RecentActivityItem>();
+
+    [...activityItems, ...taskItems, ...partItems, ...photoItems].forEach(item => {
+      if (!item.date) return;
+      unique.set(item.id, item);
+    });
+
+    return Array.from(unique.values())
+      .sort(
+        (a, b) =>
+          new Date(b.date).getTime() -
+          new Date(a.date).getTime()
+      )
+      .slice(0, 5);
+  }, [
+    projectId,
+    store.activities,
+    store.parts,
+    store.photos,
+    store.tasks,
+  ]);
 
   return (
     <Card style={styles.card}>
@@ -37,48 +123,36 @@ export function RecentActivityWidget() {
         />
       </View>
 
-      {recentPhotos.length ? (
-        recentPhotos.map(photo => (
+      {recentItems.length ? (
+        recentItems.map(item => (
           <View
-            key={photo.id}
+            key={item.id}
             style={styles.activityRow}
           >
             <MaterialCommunityIcons
-              name="camera"
+              name={item.icon}
               size={18}
               color={colors.orange}
             />
 
             <View style={{ flex: 1 }}>
               <AppText style={styles.activityText}>
-                📷 Added photo: {photo.caption}
+                {item.title}
               </AppText>
-{photo.isMilestone ? (
-  <View style={styles.milestoneRow}>
-    <MaterialCommunityIcons
-      name="trophy"
-      size={14}
-      color={colors.orange}
-    />
 
-    <AppText style={styles.milestoneText}>
-      {photo.milestoneTitle || 'Build Milestone'}
-    </AppText>
-  </View>
-) : null}
+              <AppText style={styles.detail}>
+                {item.detail}
+              </AppText>
 
-<AppText style={styles.date}>
-
-                {new Date(
-                  photo.createdAt
-                ).toLocaleDateString()}
+              <AppText style={styles.date}>
+                {formatDate(item.date)}
               </AppText>
             </View>
           </View>
         ))
       ) : (
         <AppText style={styles.empty}>
-          No recent activity yet.
+          Add a task, part, photo, or note to start the build memory.
         </AppText>
       )}
     </Card>
@@ -112,7 +186,15 @@ const styles = StyleSheet.create({
 
   activityText: {
     color: colors.white,
-    fontWeight: '700',
+    fontWeight: '800',
+    lineHeight: 20,
+  },
+
+  detail: {
+    color: colors.steel,
+    marginTop: 3,
+    fontSize: 12,
+    lineHeight: 17,
   },
 
   date: {
@@ -123,17 +205,6 @@ const styles = StyleSheet.create({
 
   empty: {
     color: colors.steel,
+    lineHeight: 20,
   },
-  milestoneRow:{
-  flexDirection:'row',
-  alignItems:'center',
-  gap:6,
-  marginTop:6,
-},
-
-milestoneText:{
-  color:colors.orange,
-  fontWeight:'800',
-  fontSize:12,
-},
 });

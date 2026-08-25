@@ -16,6 +16,8 @@ import { AppNavigator } from './src/navigation/AppNavigator';
 
 import { useFabricatorStore } from './src/state/useFabricatorStore';
 
+import { AppErrorBoundary } from './src/components/AppErrorBoundary';
+
 import { colors } from './src/theme/theme';
 
 function RootNavigation() {
@@ -53,30 +55,32 @@ export default function App() {
   }, [loadAppData]);
 
   return (
-    <SafeAreaProvider>
-      <StatusBar
-        style="light"
-        backgroundColor={colors.black}
-      />
+    <AppErrorBoundary>
+      <SafeAreaProvider>
+        <StatusBar
+          style="light"
+          backgroundColor={colors.black}
+        />
 
-      <AuthProvider>
-        <NavigationContainer>
-          {!hasLoadedAppData ? (
-            <View
-              style={{
-                flex: 1,
-                alignItems: 'center',
-                justifyContent: 'center',
-                backgroundColor: colors.black,
-              }}
-            >
-              <ActivityIndicator color={colors.orange} />
-            </View>
-          ) : (
-            <RootNavigation />
-          )}
-        </NavigationContainer>
-      </AuthProvider>
-    </SafeAreaProvider>
+        <AuthProvider>
+          <NavigationContainer>
+            {!hasLoadedAppData ? (
+              <View
+                style={{
+                  flex: 1,
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: colors.black,
+                }}
+              >
+                <ActivityIndicator color={colors.orange} />
+              </View>
+            ) : (
+              <RootNavigation />
+            )}
+          </NavigationContainer>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </AppErrorBoundary>
   );
 }

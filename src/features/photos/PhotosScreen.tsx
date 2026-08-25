@@ -3,6 +3,7 @@ import * as ImagePicker from 'expo-image-picker';
 import {
   Alert,
   Image,
+  Linking,
   Modal,
   Pressable,
   ScrollView,
@@ -106,6 +107,17 @@ function formatDate(value?: string) {
     day: 'numeric',
     year: 'numeric',
   });
+}
+
+function showPermissionRecovery(kind: 'camera' | 'photo library') {
+  Alert.alert(
+    `${kind === 'camera' ? 'Camera' : 'Photo library'} access needed`,
+    `Fabricator needs ${kind} access to add build photos. Open device settings, allow access for Fabricator, then try again.`,
+    [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Open Settings', onPress: () => Linking.openSettings() },
+    ]
+  );
 }
 
 function SelectField({
@@ -221,7 +233,7 @@ export function PhotosScreen() {
       const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
 
       if (!permission.granted) {
-        Alert.alert('Permission Required', 'Please allow photo library access.');
+        showPermissionRecovery('photo library');
         return;
       }
 
@@ -235,7 +247,10 @@ export function PhotosScreen() {
         setUri(result.assets[0].uri);
       }
     } catch (error) {
-      Alert.alert('Gallery Error', error instanceof Error ? error.message : String(error));
+      Alert.alert(
+        'Gallery did not open',
+        'Fabricator could not open your photo library. Try again, or use the camera instead.'
+      );
     }
   };
 
@@ -244,7 +259,7 @@ export function PhotosScreen() {
       const permission = await ImagePicker.requestCameraPermissionsAsync();
 
       if (!permission.granted) {
-        Alert.alert('Permission Required', 'Please allow camera access.');
+        showPermissionRecovery('camera');
         return;
       }
 
@@ -257,7 +272,10 @@ export function PhotosScreen() {
         setUri(result.assets[0].uri);
       }
     } catch (error) {
-      Alert.alert('Camera Error', error instanceof Error ? error.message : String(error));
+      Alert.alert(
+        'Camera did not open',
+        'Fabricator could not open the camera. Try again, or choose a photo from the gallery.'
+      );
     }
   };
 
@@ -336,7 +354,14 @@ export function PhotosScreen() {
           </Pressable>
         </View>
 
-        {uri ? <Image source={{ uri }} style={styles.preview} /> : null}
+        {uri ? (
+          <Image source={{ uri }} style={styles.preview} />
+        ) : (
+          <View style={styles.emptyPreview}>
+            <MaterialCommunityIcons name="image-plus-outline" size={28} color={colors.steel} />
+            <AppText style={styles.emptyPreviewText}>Choose Camera or Gallery first.</AppText>
+          </View>
+        )}
 
         <TextInput
           value={caption}
@@ -346,7 +371,11 @@ export function PhotosScreen() {
           style={styles.input}
         />
 
-        <Pressable style={[styles.saveButton, !uri && styles.saveButtonDisabled]} onPress={save}>
+        <Pressable
+          disabled={!uri}
+          style={[styles.saveButton, !uri && styles.saveButtonDisabled]}
+          onPress={save}
+        >
           <MaterialCommunityIcons name="content-save-outline" size={18} color={colors.white} />
           <AppText style={styles.saveButtonText}>Save Photo</AppText>
         </Pressable>
@@ -401,7 +430,10 @@ export function PhotosScreen() {
                   <View style={styles.photoActions}>
                     <Pressable
                       style={styles.inlineAction}
-                      onPress={() => store.setProjectCoverPhoto(photo.id)}
+                      onPress={() => {
+                        store.setProjectCoverPhoto(photo.id);
+                        Alert.alert('Cover photo set', 'This photo is now the project cover.');
+                      }}
                     >
                       <MaterialCommunityIcons
                         name={isCover ? 'image-check-outline' : 'image-filter-hdr'}
@@ -418,8 +450,10 @@ export function PhotosScreen() {
                       onPress={() => {
                         if (photo.isMilestone) {
                           store.removePhotoMilestone(photo.id);
+                          Alert.alert('Milestone removed', 'This photo is no longer marked as a milestone.');
                         } else {
                           store.setPhotoMilestone(photo.id, 'Build Milestone');
+                          Alert.alert('Milestone marked', 'This photo will stand out in the build timeline.');
                         }
                       }}
                     >
@@ -609,6 +643,22 @@ const styles = StyleSheet.create({
     height: 132,
     borderRadius: radius.md,
     marginBottom: 10,
+  },
+  emptyPreview: {
+    height: 132,
+    borderRadius: radius.md,
+    marginBottom: 10,
+    backgroundColor: colors.charcoal,
+    borderColor: colors.line,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  emptyPreviewText: {
+    color: colors.steel,
+    fontSize: 12,
+    fontWeight: '800',
   },
   input: {
     color: colors.white,

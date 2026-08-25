@@ -2,6 +2,7 @@
   "expo": {
     "name": "Fabricator",
     "slug": "fabricator",
+    "description": "A mobile build memory system for tracking shop projects, tasks, parts, photos, costs, notes, and timeline history.",
     "version": "0.1.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
@@ -28,7 +29,7 @@
 
       "infoPlist": {
         "NSCameraUsageDescription": "Fabricator uses the camera to document build progress.",
-        "NSPhotoLibraryUsageDescription": "Fabricator stores project photos for build tracking.",
+        "NSPhotoLibraryUsageDescription": "Fabricator uses your photo library so you can attach existing build photos to projects.",
         "NSMicrophoneUsageDescription": "Fabricator uses the microphone for garage voice notes.",
         "ITSAppUsesNonExemptEncryption": false
       }
