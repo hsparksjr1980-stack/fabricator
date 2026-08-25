@@ -18,6 +18,7 @@ import {
   ProjectPhase,
 } from '@/types/models';
 import { colors, radius, spacing } from '@/theme/theme';
+import { exportProjectRecord } from '@/services/export/projectExportService';
 
 const PROJECT_CATEGORIES: ProjectCategory[] = [
   'Vehicle',
@@ -135,6 +136,7 @@ export function ProjectEditScreen({
   );
 
   const [hook, setHook] = useState(project?.hook ?? '');
+  const [isExporting, setIsExporting] = useState(false);
 
   if (!project) {
     return (
@@ -211,9 +213,13 @@ export function ProjectEditScreen({
   };
 
   const deleteProject = () => {
+    const taskCount = store.tasks.filter(task => task.projectId === project.id).length;
+    const partCount = store.parts.filter(part => part.projectId === project.id).length;
+    const photoCount = store.photos.filter(photo => photo.projectId === project.id).length;
+
     Alert.alert(
       'Delete project?',
-      'This permanently removes the project and all related tasks, parts, notes, garage sessions, photos, and timeline items.',
+      `This permanently removes ${project.name}, including ${taskCount} tasks, ${partCount} parts, ${photoCount} photos, notes, sessions, and timeline items. Export first if you need a record.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -226,6 +232,33 @@ export function ProjectEditScreen({
         },
       ]
     );
+  };
+
+  const exportBeforeDelete = async () => {
+    try {
+      setIsExporting(true);
+
+      const result = await exportProjectRecord({
+        project,
+        tasks: store.tasks.filter(task => task.projectId === project.id),
+        parts: store.parts.filter(part => part.projectId === project.id),
+        photos: store.photos.filter(photo => photo.projectId === project.id),
+        activities: store.activities.filter(activity => activity.projectId === project.id),
+        voiceNotes: store.voiceNotes.filter(note => note.projectId === project.id),
+      });
+
+      Alert.alert(
+        'Project export saved',
+        `${result.fileName} was saved to Fabricator local document storage.`
+      );
+    } catch {
+      Alert.alert(
+        'Export did not finish',
+        'Fabricator could not create a local project export. Try again before deleting if you need a record.'
+      );
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   const statusLabel =
@@ -436,6 +469,16 @@ export function ProjectEditScreen({
         </AppText>
 
         <Pressable
+          style={styles.exportButton}
+          onPress={exportBeforeDelete}
+          disabled={isExporting}
+        >
+          <AppText style={styles.exportButtonText}>
+            {isExporting ? 'Exporting...' : 'Export Project First'}
+          </AppText>
+        </Pressable>
+
+        <Pressable
           style={styles.deleteButton}
           onPress={deleteProject}
         >
@@ -616,6 +659,23 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  exportButton: {
+    backgroundColor: colors.orangeSoft,
+    borderWidth: 1,
+    borderColor: 'rgba(217,106,29,0.45)',
+    borderRadius: radius.md,
+    paddingVertical: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+
+  exportButtonText: {
+    color: colors.orange,
+    fontWeight: '900',
+    fontSize: 16,
   },
 
   deleteButtonText: {

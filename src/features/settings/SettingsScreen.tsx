@@ -3,6 +3,7 @@ import { useAuth } from '@/auth/AuthProvider';
 import { Card } from '@/components/Card';
 import { Screen } from '@/components/Screen';
 import { AppText, Label, Title } from '@/components/Text';
+import { useFabricatorStore } from '@/state/useFabricatorStore';
 
 const APP_VERSION = '0.1.0';
 
@@ -174,6 +175,14 @@ function SettingsSection({
 
 export function SettingsScreen() {
   const { signOut } = useAuth();
+  const dataStatus = useFabricatorStore(state => state.dataStatus);
+  const dataStatusMessage = useFabricatorStore(state => state.dataStatusMessage);
+  const dataStatusLabel =
+    dataStatus === 'local-ready'
+      ? 'Local'
+      : dataStatus === 'local-save-error'
+      ? 'Save issue'
+      : 'Load issue';
 
   return (
   <Screen>
@@ -208,6 +217,25 @@ export function SettingsScreen() {
 
         <AppText style={{ color: '#E5E7EB', lineHeight: 22 }}>
           Fabricator is ready for local project tracking, parts, costs, photos, and build history. Cloud backup, exports, Shop Help, and pricing search are not live yet.
+        </AppText>
+      </Card>
+
+      <Card
+        style={{
+          backgroundColor: '#1A1D20',
+          borderColor: dataStatus === 'local-ready' ? '#2A2E33' : '#D97706',
+          borderWidth: 1,
+          borderRadius: 18,
+          padding: 18,
+          marginBottom: 18,
+        }}
+      >
+        <Label style={{ color: '#D97706', marginBottom: 12 }}>DATA STATUS</Label>
+        <AppText style={{ color: '#F3F4F6', fontSize: 18, fontWeight: '900' }}>
+          {dataStatusLabel}
+        </AppText>
+        <AppText style={{ color: '#9CA3AF', lineHeight: 21, marginTop: 8 }}>
+          {dataStatusMessage}
         </AppText>
       </Card>
 

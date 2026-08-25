@@ -56,6 +56,8 @@ type Store = {
   dashboardWidgets: DashboardWidget[];
   quickActions: QuickAction[];
   hasLoadedAppData: boolean;
+  dataStatus: 'local-ready' | 'local-save-error' | 'local-load-error';
+  dataStatusMessage: string;
   selectProject: (id: string) => void;
   setProjectFilter: (filter: 'active' | 'completed' | 'archived') => void;
   activeProject: () => Project | undefined;
@@ -176,6 +178,8 @@ export const useFabricatorStore = create<Store>()((set, get) => ({
   dashboardWidgets: widgets,
   quickActions,
   hasLoadedAppData: false,
+  dataStatus: 'local-ready',
+  dataStatusMessage: 'Build data is saved locally on this device.',
 
   selectProject: id => {
     set({ selectedProjectId: id });
@@ -722,11 +726,24 @@ export const useFabricatorStore = create<Store>()((set, get) => ({
       photos: state.photos,
       activities: state.activities,
     };
-    await appDataStorage.save(data);
+    const result = await appDataStorage.save(data);
+
+    if (result.ok) {
+      set({
+        dataStatus: 'local-ready',
+        dataStatusMessage: 'Build data is saved locally on this device.',
+      });
+    } else {
+      set({
+        dataStatus: 'local-save-error',
+        dataStatusMessage: 'Fabricator could not save the latest local changes. Export important work and restart the app before continuing.',
+      });
+    }
   },
 
   loadAppData: async () => {
-    const saved = await appDataStorage.load();
+    const result = await appDataStorage.load();
+    const saved = result.data;
 
     if (saved) {
       const savedProjects = saved.projects.map((project: Project) => ({
@@ -751,9 +768,23 @@ export const useFabricatorStore = create<Store>()((set, get) => ({
           ? saved.selectedProjectId
           : savedProjects.find((project: Project) => project.status === 'active')?.id || savedProjects[0]?.id || '',
         hasLoadedAppData: true,
+        dataStatus: 'local-ready',
+        dataStatusMessage: 'Build data is saved locally on this device.',
+      });
+    } else if (result.error) {
+      set({
+        hasLoadedAppData: true,
+        dataStatus: 'local-load-error',
+        dataStatusMessage: result.recoveredCorruptData
+          ? 'Fabricator could not read saved local data and reset the local cache. Review the sample project before adding new work.'
+          : 'Fabricator could not read local data from this device. Try restarting the app before adding new work.',
       });
     } else {
-      set({ hasLoadedAppData: true });
+      set({
+        hasLoadedAppData: true,
+        dataStatus: 'local-ready',
+        dataStatusMessage: 'Build data is saved locally on this device.',
+      });
     }
   },
 }));

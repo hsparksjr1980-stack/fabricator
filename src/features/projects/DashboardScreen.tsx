@@ -71,6 +71,7 @@ export function DashboardScreen() {
   const store = useFabricatorStore();
   const project = store.activeProject();
   const [isExporting, setIsExporting] = useState(false);
+  const hasDataIssue = store.dataStatus !== 'local-ready';
 
   useEffect(() => {
     if (!project) {
@@ -214,10 +215,19 @@ export function DashboardScreen() {
             <View style={{ flex: 1 }}>
               <AppText style={styles.dataTrustTitle}>Local build record</AppText>
               <AppText style={styles.dataTrustCopy}>
-                Your project data is saved on this device. Export creates a readable Markdown record from the data available locally.
+                {store.dataStatusMessage} Export creates a readable Markdown record from the data available locally.
               </AppText>
             </View>
           </View>
+
+          {hasDataIssue ? (
+            <View style={styles.dataWarning}>
+              <MaterialCommunityIcons name="alert-outline" size={16} color={colors.orange} />
+              <AppText style={styles.dataWarningText}>
+                Export important project records before continuing heavy edits.
+              </AppText>
+            </View>
+          ) : null}
 
           <Pressable
             disabled={isExporting}
@@ -431,6 +441,24 @@ const styles = StyleSheet.create({
     gap: 12,
     alignItems: 'flex-start',
     marginBottom: 14,
+  },
+  dataWarning: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: colors.orangeSoft,
+    borderColor: 'rgba(217,106,29,0.35)',
+    borderWidth: 1,
+    borderRadius: radius.md,
+    padding: 10,
+    marginBottom: 12,
+  },
+  dataWarningText: {
+    flex: 1,
+    color: colors.white,
+    fontSize: 12,
+    lineHeight: 17,
+    fontWeight: '700',
   },
   dataTrustIcon: {
     width: 38,
