@@ -94,6 +94,7 @@ export function DashboardScreen() {
   const remainingBudget = expectedBudget - actualSpend;
   const projectActivities = store.activities.filter(activity => activity.projectId === project.id);
   const projectVoiceNotes = store.voiceNotes.filter(note => note.projectId === project.id);
+  const openGarage = () => navigation.navigate('Welcome');
 
   const handleExport = async () => {
     try {
@@ -141,10 +142,17 @@ export function DashboardScreen() {
                 <Title style={styles.projectTitle}>{project.name}</Title>
               </View>
 
-              <Pressable style={styles.editButton} onPress={() => navigation.navigate('ProjectEdit')}>
-                <MaterialCommunityIcons name="square-edit-outline" size={16} color={colors.orange} />
-                <AppText style={styles.editText}>Edit</AppText>
-              </Pressable>
+              <View style={styles.titleActions}>
+                <Pressable style={styles.garageButton} onPress={openGarage}>
+                  <MaterialCommunityIcons name="garage-open-variant" size={16} color={colors.black} />
+                  <AppText style={styles.garageText}>Garage</AppText>
+                </Pressable>
+
+                <Pressable style={styles.editButton} onPress={() => navigation.navigate('ProjectEdit')}>
+                  <MaterialCommunityIcons name="square-edit-outline" size={16} color={colors.orange} />
+                  <AppText style={styles.editText}>Edit</AppText>
+                </Pressable>
+              </View>
             </View>
 
             <View style={styles.metaWrap}>
@@ -289,12 +297,32 @@ const styles = StyleSheet.create({
   titleColumn: {
     flex: 1,
   },
+  titleActions: {
+    alignItems: 'flex-end',
+    gap: 8,
+  },
   projectTitle: {
     fontSize: 31,
     lineHeight: 35,
     marginTop: 5,
   },
+  garageButton: {
+    minHeight: 38,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: colors.orange,
+    paddingVertical: 9,
+    paddingHorizontal: 13,
+    borderRadius: 999,
+  },
+  garageText: {
+    color: colors.black,
+    fontWeight: '900',
+    fontSize: 12,
+  },
   editButton: {
+    minHeight: 38,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
