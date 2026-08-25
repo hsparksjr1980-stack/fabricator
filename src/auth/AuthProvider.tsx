@@ -1,6 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from 'react';
 import { Session, User } from '@supabase/supabase-js';
-import { supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 type AuthContextValue = {
   session: Session | null;
@@ -16,6 +16,17 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
+const backendUnavailableMessage =
+  'Fabricator could not reach account services. You can retry sign-in when the backend is available.';
+
+function requireSupabase() {
+  if (!supabase) {
+    throw new Error(backendUnavailableMessage);
+  }
+
+  return supabase;
+}
+
 export function AuthProvider({
   children,
 }: {
@@ -29,23 +40,25 @@ export function AuthProvider({
     try {
       setIsLoading(true);
 
+      if (!isSupabaseConfigured || !supabase) {
+        setSession(null);
+        setAuthError(backendUnavailableMessage);
+        return;
+      }
+
       const { data, error } = await supabase.auth
       .getSession()
       ;
 
       if (error) {
-        setAuthError(
-          'Fabricator could not reach account services. You can retry sign-in when the backend is available.'
-        );
+        setAuthError(backendUnavailableMessage);
       } else {
         setAuthError(null);
       }
 
       setSession(data?.session ?? null);
     } catch {
-      setAuthError(
-        'Fabricator could not reach account services. You can retry sign-in when the backend is available.'
-      );
+      setAuthError(backendUnavailableMessage);
     } finally {
       setIsLoading(false);
     }
@@ -53,6 +66,10 @@ export function AuthProvider({
 
   useEffect(() => {
     loadSession();
+
+    if (!supabase) {
+      return undefined;
+    }
 
     const {
       data: { subscription },
@@ -74,7 +91,8 @@ export function AuthProvider({
       retrySession: loadSession,
 
       async signUp(email, password) {
-        const { error } = await supabase.auth.signUp({
+        const authClient = requireSupabase();
+        const { error } = await authClient.auth.signUp({
           email,
           password,
         });
@@ -87,7 +105,8 @@ export function AuthProvider({
       },
 
       async signIn(email, password) {
-        const { error } = await supabase.auth.signInWithPassword({
+        const authClient = requireSupabase();
+        const { error } = await authClient.auth.signInWithPassword({
           email,
           password,
         });
@@ -100,7 +119,8 @@ export function AuthProvider({
       },
 
       async signOut() {
-        const { error } = await supabase.auth.signOut();
+        const authClient = requireSupabase();
+        const { error } = await authClient.auth.signOut();
 
         if (error) {
           throw error;
@@ -110,7 +130,8 @@ export function AuthProvider({
       },
 
       async resetPassword(email) {
-        const { error } = await supabase.auth.resetPasswordForEmail(email);
+        const authClient = requireSupabase();
+        const { error } = await authClient.auth.resetPasswordForEmail(email);
 
         if (error) {
           throw error;
