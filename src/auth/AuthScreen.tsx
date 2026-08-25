@@ -42,7 +42,7 @@ function friendlyAuthError(error: unknown) {
 }
 
 export function AuthScreen() {
-  const { signIn, signUp, resetPassword, authError } = useAuth();
+  const { signIn, signUp, resetPassword, authError, retrySession } = useAuth();
 
   const [mode, setMode] = useState<'signin' | 'signup'>(
     'signin'
@@ -54,10 +54,18 @@ export function AuthScreen() {
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit() {
-    if (!email || !password) {
+    if (!email.trim() || !password) {
       Alert.alert(
         'Missing information',
         'Please enter email and password.'
+      );
+      return;
+    }
+
+    if (mode === 'signup' && password.length < 6) {
+      Alert.alert(
+        'Password too short',
+        'Use at least 6 characters for your Fabricator password.'
       );
       return;
     }
@@ -66,14 +74,14 @@ export function AuthScreen() {
       setLoading(true);
 
       if (mode === 'signup') {
-        await signUp(email, password);
+        await signUp(email.trim(), password);
 
         Alert.alert(
           'Account created',
           'Check your email for confirmation.'
         );
       } else {
-        await signIn(email, password);
+        await signIn(email.trim(), password);
       }
     } catch (error) {
       Alert.alert(
@@ -86,7 +94,7 @@ export function AuthScreen() {
   }
 
   async function handleForgotPassword() {
-    if (!email) {
+    if (!email.trim()) {
       Alert.alert(
         'Email required',
         'Enter your email address to reset your password.'
@@ -97,7 +105,7 @@ export function AuthScreen() {
     try {
       setLoading(true);
 
-      await resetPassword(email);
+      await resetPassword(email.trim());
 
       Alert.alert(
         'Password reset sent',
@@ -131,6 +139,9 @@ export function AuthScreen() {
           <AppText style={styles.backendNoticeText}>
             {authError}
           </AppText>
+          <Pressable style={styles.retryButton} onPress={retrySession}>
+            <AppText style={styles.retryButtonText}>Retry Account Services</AppText>
+          </Pressable>
         </View>
       ) : null}
 
@@ -221,6 +232,20 @@ const styles = StyleSheet.create({
   backendNoticeText: {
     color: colors.white,
     lineHeight: 20,
+  },
+
+  retryButton: {
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.orange,
+    paddingVertical: 10,
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+
+  retryButtonText: {
+    color: colors.orange,
+    fontWeight: '900',
   },
 
   input: {
