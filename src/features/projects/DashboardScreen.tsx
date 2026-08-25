@@ -1,4 +1,4 @@
-import { Alert, Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Alert, Image, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
@@ -16,6 +16,18 @@ function formatCurrency(value?: number) {
   const safeValue = Number(value || 0);
   const prefix = safeValue < 0 ? '-$' : '$';
   return `${prefix}${Math.abs(safeValue).toLocaleString()}`;
+}
+
+function formatBudgetInput(value?: number) {
+  if (!value) return '';
+  return String(value);
+}
+
+function parseBudgetInput(value: string) {
+  const normalized = value.replace(/[$,\s]/g, '');
+  const parsed = Number(normalized);
+
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
 function statusLabel(status: ProjectStatus) {
@@ -71,6 +83,8 @@ export function DashboardScreen() {
   const store = useFabricatorStore();
   const project = store.activeProject();
   const [isExporting, setIsExporting] = useState(false);
+  const [isBudgetEditing, setIsBudgetEditing] = useState(false);
+  const [budgetDraft, setBudgetDraft] = useState('');
   const hasDataIssue = store.dataStatus !== 'local-ready';
 
   useEffect(() => {
@@ -78,6 +92,11 @@ export function DashboardScreen() {
       navigation.navigate('Welcome');
     }
   }, [navigation, project]);
+
+  useEffect(() => {
+    setBudgetDraft(formatBudgetInput(project?.expectedBudget ?? project?.budgetTarget));
+    setIsBudgetEditing(false);
+  }, [project?.budgetTarget, project?.expectedBudget, project?.id]);
 
   if (!project) return null;
 
@@ -95,6 +114,18 @@ export function DashboardScreen() {
   const projectActivities = store.activities.filter(activity => activity.projectId === project.id);
   const projectVoiceNotes = store.voiceNotes.filter(note => note.projectId === project.id);
   const openGarage = () => navigation.navigate('Welcome');
+
+  const saveBudget = () => {
+    const nextBudget = parseBudgetInput(budgetDraft);
+
+    store.updateProject(project.id, {
+      expectedBudget: nextBudget,
+      budgetTarget: nextBudget,
+    });
+
+    setBudgetDraft(formatBudgetInput(nextBudget));
+    setIsBudgetEditing(false);
+  };
 
   const handleExport = async () => {
     try {
@@ -190,6 +221,44 @@ export function DashboardScreen() {
               <BudgetChip label="Actual" value={formatCurrency(actualSpend)} />
               <BudgetChip label="Left" value={formatCurrency(remainingBudget)} tone={remainingBudget >= 0 ? 'good' : 'warning'} />
             </View>
+
+            {isBudgetEditing ? (
+              <View style={styles.budgetEditor}>
+                <TextInput
+                  value={budgetDraft}
+                  onChangeText={setBudgetDraft}
+                  placeholder="Project budget"
+                  placeholderTextColor={colors.steel}
+                  keyboardType="numeric"
+                  style={styles.budgetInput}
+                />
+
+                <View style={styles.budgetEditorActions}>
+                  <Pressable style={styles.budgetSaveButton} onPress={saveBudget}>
+                    <MaterialCommunityIcons name="check" size={17} color={colors.black} />
+                    <AppText style={styles.budgetSaveText}>Save</AppText>
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.budgetCancelButton}
+                    onPress={() => {
+                      setBudgetDraft(formatBudgetInput(expectedBudget));
+                      setIsBudgetEditing(false);
+                    }}
+                  >
+                    <AppText style={styles.budgetCancelText}>Cancel</AppText>
+                  </Pressable>
+                </View>
+              </View>
+            ) : (
+              <Pressable
+                style={({ pressed }) => [styles.changeBudgetButton, pressed && styles.pressed]}
+                onPress={() => setIsBudgetEditing(true)}
+              >
+                <MaterialCommunityIcons name="cash-edit" size={17} color={colors.orange} />
+                <AppText style={styles.changeBudgetText}>Change Budget</AppText>
+              </Pressable>
+            )}
           </View>
         </Card>
 
@@ -449,6 +518,69 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '900',
     marginTop: 6,
+  },
+  changeBudgetButton: {
+    minHeight: 42,
+    marginTop: 10,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(217,106,29,0.48)',
+    backgroundColor: colors.orangeSoft,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  changeBudgetText: {
+    color: colors.orange,
+    fontWeight: '900',
+    fontSize: 13,
+  },
+  budgetEditor: {
+    marginTop: 10,
+    gap: 10,
+  },
+  budgetInput: {
+    minHeight: 48,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(217,106,29,0.48)',
+    backgroundColor: colors.black,
+    color: colors.white,
+    paddingHorizontal: 13,
+    fontSize: 16,
+    fontWeight: '800',
+  },
+  budgetEditorActions: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  budgetSaveButton: {
+    minHeight: 42,
+    flex: 1,
+    borderRadius: radius.md,
+    backgroundColor: colors.orange,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 7,
+  },
+  budgetSaveText: {
+    color: colors.black,
+    fontWeight: '900',
+  },
+  budgetCancelButton: {
+    minHeight: 42,
+    flex: 1,
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: colors.line,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  budgetCancelText: {
+    color: colors.white,
+    fontWeight: '900',
   },
   goodValue: {
     color: colors.green,
