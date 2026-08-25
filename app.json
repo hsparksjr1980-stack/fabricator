@@ -23,7 +23,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.hsparks.fabricator",
-      "buildNumber": "25",
+      "buildNumber": "35",
 
       "icon": "./assets/AppLogo.png",
 
